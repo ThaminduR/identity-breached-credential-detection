@@ -94,19 +94,16 @@
                             org.wso2.carbon.identity.breach.detection.internal,
                             org.wso2.carbon.identity.breach.detection.listener,
                             org.wso2.carbon.identity.breach.detection.engine,
-                            org.wso2.carbon.identity.breach.detection.policy,
-                            org.wso2.carbon.identity.breach.detection.connector,
                             org.wso2.carbon.identity.breach.detection.source,
                             org.wso2.carbon.identity.breach.detection.config,
-                            org.wso2.carbon.identity.breach.detection.metrics,
                             org.wso2.carbon.identity.breach.detection.util
                         </Private-Package>
                         <!--
-                          Only the management contract is exported. A connector that reaches past the SPI is
-                          exactly the coupling the core/connector split exists to prevent.
+                          Only the error codes are exported, so a caller can name what it caught. Everything
+                          else is private: a connector that reaches past the SPI is exactly the coupling the
+                          core/connector split exists to prevent.
                         -->
                         <Export-Package>
-                            org.wso2.carbon.identity.breach.detection.mgt;version="${breach.detection.exp.pkg.version}",
                             org.wso2.carbon.identity.breach.detection.constants;version="${breach.detection.exp.pkg.version}"
                         </Export-Package>
                         <Import-Package>

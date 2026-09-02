@@ -22,11 +22,8 @@ import org.wso2.carbon.identity.breach.source.BreachContext;
 import org.wso2.carbon.identity.breach.source.BreachSource;
 import org.wso2.carbon.identity.breach.source.BreachSourceException;
 import org.wso2.carbon.identity.breach.source.BreachVerdict;
-import org.wso2.carbon.identity.breach.source.Capability;
-import org.wso2.carbon.identity.breach.source.Descriptor;
 import org.wso2.carbon.identity.breach.source.FailureAction;
 
-import java.util.EnumSet;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
@@ -37,7 +34,7 @@ class StubBreachSource implements BreachSource {
 
     private final String id;
     private final int priority;
-    private final EnumSet<Capability> capabilities;
+    private final boolean offline;
     private final Function<BreachContext, BreachVerdict> answer;
     private final AtomicInteger calls = new AtomicInteger();
 
@@ -48,25 +45,23 @@ class StubBreachSource implements BreachSource {
     private RuntimeException failure;
     private long delayMillis;
 
-    StubBreachSource(String id, int priority, EnumSet<Capability> capabilities,
-                     Function<BreachContext, BreachVerdict> answer) {
+    private StubBreachSource(String id, int priority, boolean offline,
+                             Function<BreachContext, BreachVerdict> answer) {
 
         this.id = id;
         this.priority = priority;
-        this.capabilities = capabilities;
+        this.offline = offline;
         this.answer = answer;
     }
 
     static StubBreachSource offline(String id, int priority, Function<BreachContext, BreachVerdict> answer) {
 
-        return new StubBreachSource(id, priority, EnumSet.of(Capability.OFFLINE, Capability.PASSWORD_ONLY),
-                answer);
+        return new StubBreachSource(id, priority, true, answer);
     }
 
     static StubBreachSource remote(String id, int priority, Function<BreachContext, BreachVerdict> answer) {
 
-        return new StubBreachSource(id, priority, EnumSet.of(Capability.REMOTE, Capability.PASSWORD_ONLY),
-                answer);
+        return new StubBreachSource(id, priority, false, answer);
     }
 
     StubBreachSource notConfigured() {
@@ -117,21 +112,15 @@ class StubBreachSource implements BreachSource {
     }
 
     @Override
-    public Descriptor getDescriptor() {
-
-        return Descriptor.builder(id).description(id).build();
-    }
-
-    @Override
     public int getPriority() {
 
         return priority;
     }
 
     @Override
-    public EnumSet<Capability> getCapabilities() {
+    public boolean isOffline() {
 
-        return capabilities;
+        return offline;
     }
 
     @Override

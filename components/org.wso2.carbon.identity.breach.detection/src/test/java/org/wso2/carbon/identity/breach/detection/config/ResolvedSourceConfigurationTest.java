@@ -21,7 +21,6 @@ package org.wso2.carbon.identity.breach.detection.config;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.breach.source.PropertyDescriptor;
-import org.wso2.carbon.identity.breach.source.PropertyType;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -42,12 +41,12 @@ import static org.testng.Assert.assertTrue;
 public class ResolvedSourceConfigurationTest {
 
     private static final List<PropertyDescriptor> DESCRIPTORS = Arrays.asList(
-            PropertyDescriptor.builder("path", PropertyType.PATH).required(true).build(),
-            PropertyDescriptor.builder("format", PropertyType.STRING).defaultValue("auto").build(),
-            PropertyDescriptor.builder("read_timeout_ms", PropertyType.DURATION_MS)
+            PropertyDescriptor.builder("path").required(true).build(),
+            PropertyDescriptor.builder("format").defaultValue("auto").build(),
+            PropertyDescriptor.builder("read_timeout_ms")
                     .defaultValue("1500").build(),
-            PropertyDescriptor.builder("api_key", PropertyType.STRING).secret(true).build(),
-            PropertyDescriptor.builder("verbose", PropertyType.BOOLEAN).defaultValue("false").build());
+            PropertyDescriptor.builder("api_key").secret(true).build(),
+            PropertyDescriptor.builder("verbose").defaultValue("false").build());
 
     private Path carbonHome;
 

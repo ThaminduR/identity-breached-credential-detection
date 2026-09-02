@@ -24,25 +24,15 @@ import org.wso2.carbon.identity.breach.detection.constants.BreachDetectionConsta
 import org.wso2.carbon.identity.breach.source.BreachContext;
 import org.wso2.carbon.identity.breach.source.BreachSource;
 import org.wso2.carbon.identity.breach.source.BreachVerdict;
-import org.wso2.carbon.identity.breach.source.Capability;
-import org.wso2.carbon.identity.breach.source.Descriptor;
-import org.wso2.carbon.identity.breach.source.FailureAction;
 import org.wso2.carbon.identity.breach.source.PropertyDescriptor;
-import org.wso2.carbon.identity.breach.source.PropertyType;
 import org.wso2.carbon.identity.breach.source.SourceConfiguration;
-import org.wso2.carbon.identity.breach.source.SourceStatus;
 import org.wso2.carbon.identity.breach.source.UnavailableCause;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.text.SimpleDateFormat;
 import java.util.Arrays;
-import java.util.Date;
-import java.util.EnumSet;
 import java.util.List;
-import java.util.Locale;
-import java.util.TimeZone;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -70,13 +60,8 @@ public class LocalBlocklistSource implements BreachSource {
      */
     private static final int DEFAULT_MAX_HEAP_ENTRIES = 5_000_000;
 
-    private static final String DISABLED = "Switched off in deployment configuration.";
-    private static final String NO_FILE = "No blocklist file is configured.";
-    private static final String NO_FORMAT = "No blocklist format is configured. Set format to sha1, sha256 or "
-            + "plaintext to match how the file is written.";
 
     private final AtomicReference<BlocklistSnapshot> snapshot = new AtomicReference<>();
-    private final AtomicReference<String> lastError = new AtomicReference<>();
 
     private volatile boolean enabled = true;
     private volatile Path path;
@@ -89,39 +74,16 @@ public class LocalBlocklistSource implements BreachSource {
         return BreachDetectionConstants.LOCAL_LIST_SOURCE_ID;
     }
 
-    @Override
-    public Descriptor getDescriptor() {
-
-        return Descriptor.builder("Password list on this server")
-                .description("Checks against a list maintained by your deployment team. "
-                        + "Works without internet access.")
-                .vendor("WSO2")
-                .build();
-    }
 
     @Override
     public List<PropertyDescriptor> getProperties() {
 
         return Arrays.asList(
-                PropertyDescriptor.builder(PROPERTY_ENABLE, PropertyType.BOOLEAN)
-                        .defaultValue("true")
-                        .displayName("Enable")
-                        .description("Set to false to park a configured list without removing its settings.")
-                        .build(),
-                PropertyDescriptor.builder(PROPERTY_PATH, PropertyType.PATH)
-                        .required(true)
-                        .displayName("Blocklist file")
-                        .description("Absolute path to the file, inside the deployment directory.")
-                        .build(),
-                PropertyDescriptor.builder(PROPERTY_FORMAT, PropertyType.STRING)
-                        .required(true)
-                        .displayName("Format")
-                        .description("sha1, sha256, or plaintext. Must match how the file is written.")
-                        .build(),
-                PropertyDescriptor.builder(PROPERTY_MAX_HEAP_ENTRIES, PropertyType.INTEGER)
-                        .defaultValue(String.valueOf(DEFAULT_MAX_HEAP_ENTRIES))
-                        .displayName("Maximum in-heap entries")
-                        .build());
+                PropertyDescriptor.builder(PROPERTY_ENABLE).defaultValue("true").build(),
+                PropertyDescriptor.builder(PROPERTY_PATH).required(true).build(),
+                PropertyDescriptor.builder(PROPERTY_FORMAT).required(true).build(),
+                PropertyDescriptor.builder(PROPERTY_MAX_HEAP_ENTRIES)
+                        .defaultValue(String.valueOf(DEFAULT_MAX_HEAP_ENTRIES)).build());
     }
 
     @Override
@@ -133,9 +95,9 @@ public class LocalBlocklistSource implements BreachSource {
     }
 
     @Override
-    public EnumSet<Capability> getCapabilities() {
+    public boolean isOffline() {
 
-        return EnumSet.of(Capability.OFFLINE, Capability.PASSWORD_ONLY);
+        return true;
     }
 
     @Override
@@ -160,13 +122,12 @@ public class LocalBlocklistSource implements BreachSource {
         if (!enable) {
             // Released rather than merely ignored: a parked corpus should cost neither heap nor a mapping.
             snapshot.set(null);
-            lastError.set(null);
             LOG.info("The local breach blocklist is switched off in deployment configuration.");
             return;
         }
         if (path == null || format == null) {
             snapshot.set(null);
-            lastError.set(path == null ? NO_FILE : NO_FORMAT);
+            LOG.warn("The local breach blocklist needs both a path and a format. It will not be consulted.");
             return;
         }
         if (!unchanged) {
@@ -192,48 +153,7 @@ public class LocalBlocklistSource implements BreachSource {
         return enabled && isConfigured(tenantDomain);
     }
 
-    /**
-     * A list that fails to load is a broken file, which an operator can fix in minutes and which says nothing
-     * about the password. Refusing is the safe answer and costs little.
-     */
-    @Override
-    public FailureAction getFailureAction(String tenantDomain) {
 
-        return FailureAction.DENY;
-    }
-
-    @Override
-    public SourceStatus getStatus(String tenantDomain) {
-
-        BlocklistSnapshot current = snapshot.get();
-        if (!enabled) {
-            return SourceStatus.builder(SourceStatus.State.NOT_CONFIGURED).summary(DISABLED).build();
-        }
-        if (path == null || configuredFormat == null) {
-            return SourceStatus.builder(SourceStatus.State.NOT_CONFIGURED)
-                    .summary(path == null ? NO_FILE : NO_FORMAT)
-                    .build();
-        }
-        if (current == null) {
-            return SourceStatus.builder(SourceStatus.State.UNAVAILABLE)
-                    .summary(lastError.get() == null ? "The blocklist file could not be read." : lastError.get())
-                    .fact("FILE", path.toString())
-                    .build();
-        }
-        SourceStatus.Builder builder = SourceStatus.builder(SourceStatus.State.READY)
-                .lastSuccess(current.getLoadedAtEpochMillis())
-                .fact("ENTRIES", String.format(Locale.ROOT, "%,d", current.getEntries()))
-                .fact("FORMAT", describeFormat(current.getFormat()))
-                .fact("LAST LOADED", formatTimestamp(current.getLoadedAtEpochMillis()))
-                .fact("SKIPPED", current.getSkipped() + " malformed lines");
-        if (current.isTruncated()) {
-            builder.summary("The file exceeded the maximum entry count and was loaded only in part.");
-        }
-        if (lastError.get() != null) {
-            builder.fact("LAST LOAD ERROR", lastError.get());
-        }
-        return builder.build();
-    }
 
     @Override
     public BreachVerdict evaluate(BreachContext context) {
@@ -242,7 +162,7 @@ public class LocalBlocklistSource implements BreachSource {
         if (current == null) {
             // Not being able to check is not the same as finding nothing, and is never reported as if it were.
             return BreachVerdict.unavailable(getId(), UnavailableCause.MISCONFIGURED,
-                    lastError.get() == null ? "No blocklist is loaded." : lastError.get());
+                    "No blocklist is loaded.");
         }
         String digest = context.getCredential().digestHex(current.getFormat().getDigestAlgorithm());
         return current.contains(digest) ? BreachVerdict.found(getId()) : BreachVerdict.notFound(getId());
@@ -255,37 +175,19 @@ public class LocalBlocklistSource implements BreachSource {
      * consistent view. A file that cannot be parsed leaves the previously loaded list in effect and reports the
      * failure rather than quietly emptying the list.
      *
-     * @return a human-readable summary of what happened.
      */
-    public String reload() {
+    private void reload() {
 
-        if (!enabled) {
-            return DISABLED;
-        }
         Path current = path;
-        if (current == null) {
-            return NO_FILE;
-        }
-        if (configuredFormat == null) {
-            return NO_FORMAT;
-        }
         if (!Files.isReadable(current)) {
-            String message = "The blocklist file is not readable.";
-            lastError.set(message);
-            LOG.error(message + " Path: " + current);
-            return message;
+            LOG.error("The breach blocklist file is not readable. Path: " + current);
+            return;
         }
         try {
-            BlocklistSnapshot loaded = BlocklistLoader.load(current, configuredFormat, maxHeapEntries);
-            snapshot.set(loaded);
-            lastError.set(null);
-            return "Loaded " + loaded.getEntries() + " entries with " + loaded.getSkipped() + " ignored.";
+            snapshot.set(BlocklistLoader.load(current, configuredFormat, maxHeapEntries));
         } catch (Exception e) {
-            String message = "The blocklist file could not be parsed. The previously loaded list stays in "
-                    + "effect.";
-            lastError.set(message);
-            LOG.error(message + " Path: " + current, e);
-            return message;
+            LOG.error("The breach blocklist file could not be parsed. The previously loaded list stays in "
+                    + "effect. Path: " + current, e);
         }
     }
 
@@ -297,22 +199,5 @@ public class LocalBlocklistSource implements BreachSource {
         snapshot.set(null);
     }
 
-    private static String describeFormat(BlocklistFormat format) {
 
-        switch (format) {
-            case SHA1:
-                return "SHA-1 hashes";
-            case SHA256:
-                return "SHA-256 hashes";
-            default:
-                return "plaintext, hashed on load";
-        }
-    }
-
-    private static String formatTimestamp(long epochMillis) {
-
-        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm 'UTC'", Locale.ROOT);
-        format.setTimeZone(TimeZone.getTimeZone("UTC"));
-        return format.format(new Date(epochMillis));
-    }
 }

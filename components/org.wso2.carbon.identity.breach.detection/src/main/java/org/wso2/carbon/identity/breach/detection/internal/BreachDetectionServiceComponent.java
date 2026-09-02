@@ -33,7 +33,6 @@ import org.wso2.carbon.identity.breach.detection.config.BreachDetectionConfig;
 import org.wso2.carbon.identity.breach.detection.engine.BreachEvaluationEngine;
 import org.wso2.carbon.identity.breach.detection.engine.SourceRegistry;
 import org.wso2.carbon.identity.breach.detection.listener.BreachDetectionListener;
-import org.wso2.carbon.identity.breach.detection.mgt.BreachDetectionService;
 import org.wso2.carbon.identity.breach.detection.source.LocalBlocklistSource;
 import org.wso2.carbon.identity.breach.source.BreachSource;
 import org.wso2.carbon.identity.core.util.IdentityCoreInitializedEvent;
@@ -48,7 +47,8 @@ import java.util.List;
  * <p>
  * The reference to {@link BreachSource} is dynamic and multiple-cardinality, which is the whole point of the
  * core/connector split: a connector JAR dropped into {@code dropins} registers itself and is picked up with no
- * configuration edit and no restart, and removing it unbinds one service and changes nothing else.
+ * configuration edit and no restart - a service event rather than a file change - and removing it unbinds one
+ * service and changes nothing else.
  */
 @Component(
         name = "identity.breach.detection.component",
@@ -69,8 +69,8 @@ public class BreachDetectionServiceComponent {
 
         BreachDetectionConfig config = BreachDetectionConfig.reload();
 
-        holder.setEvaluationEngine(new BreachEvaluationEngine(registry, holder.getMetrics(),
-                config.getWorkerThreads(), config.getEvaluationTimeoutMs()));
+        holder.setEvaluationEngine(new BreachEvaluationEngine(registry, config.getWorkerThreads(),
+                config.getEvaluationTimeoutMs()));
 
         LocalBlocklistSource localBlocklistSource = new LocalBlocklistSource();
         holder.setLocalBlocklistSource(localBlocklistSource);
@@ -80,8 +80,6 @@ public class BreachDetectionServiceComponent {
         registrations.add(bundleContext.registerService(BreachSource.class, localBlocklistSource, null));
         registrations.add(bundleContext.registerService(UserOperationEventListener.class,
                 new BreachDetectionListener(), null));
-        registrations.add(bundleContext.registerService(BreachDetectionService.class,
-                new BreachDetectionServiceImpl(), null));
 
         SourceConfigurator.configureAll(registry);
 

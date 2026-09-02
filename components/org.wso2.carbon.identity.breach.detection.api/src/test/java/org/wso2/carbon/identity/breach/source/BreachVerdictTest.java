@@ -36,7 +36,6 @@ public class BreachVerdictTest {
         BreachVerdict verdict = BreachVerdict.unavailable("hibp", UnavailableCause.TIMEOUT, "no answer");
         assertEquals(verdict.getOutcome(), Outcome.UNAVAILABLE);
         assertEquals(verdict.getCause().orElse(null), UnavailableCause.TIMEOUT);
-        assertFalse(verdict.getOccurrences().isPresent());
     }
 
     @Test
@@ -44,14 +43,6 @@ public class BreachVerdictTest {
 
         assertEquals(BreachVerdict.unavailable("x", null, null).getCause().orElse(null),
                 UnavailableCause.INTERNAL);
-    }
-
-    @Test
-    public void foundCarriesOccurrencesOnlyWhenTheSourceCounts() {
-
-        assertEquals(BreachVerdict.found("hibp", 612953).getOccurrences().getAsLong(), 612953L);
-        assertFalse(BreachVerdict.found("localList").getOccurrences().isPresent());
-        assertFalse(BreachVerdict.found("localList", -1).getOccurrences().isPresent());
     }
 
     @Test
@@ -63,10 +54,10 @@ public class BreachVerdictTest {
     }
 
     @Test
-    public void theStringFormCarriesNoCredentialAndNoCount() {
+    public void theStringFormNamesTheSourceAndNothingElse() {
 
-        String text = BreachVerdict.found("hibp", 612953).toString();
+        String text = BreachVerdict.found("hibp").toString();
         assertTrue(text.contains("hibp"));
-        assertFalse(text.contains("612953"));
+        assertTrue(text.contains("FOUND"));
     }
 }

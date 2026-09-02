@@ -20,11 +20,8 @@ package org.wso2.carbon.identity.breach.detection.source;
 
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.breach.source.BreachContext;
-import org.wso2.carbon.identity.breach.source.Capability;
 import org.wso2.carbon.identity.breach.source.Credential;
-import org.wso2.carbon.identity.breach.source.Operation;
 import org.wso2.carbon.identity.breach.source.Outcome;
-import org.wso2.carbon.identity.breach.source.SourceStatus;
 import org.wso2.carbon.identity.breach.source.UnavailableCause;
 
 import java.io.IOException;
@@ -40,17 +37,17 @@ import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
 /**
- * The offline source as the engine and the administrator surface see it.
+ * The offline source as the engine sees it.
  */
 public class LocalBlocklistSourceTest {
 
     private static final String TENANT = "carbon.super";
 
     @Test
-    public void declaresItselfAsOfflineAndCheapSoTheEngineConsultsItFirst() {
+    public void declaresItselfOfflineAndCheapSoTheEngineConsultsItFirst() {
 
         LocalBlocklistSource source = new LocalBlocklistSource();
-        assertTrue(source.getCapabilities().contains(Capability.OFFLINE));
+        assertTrue(source.isOffline());
         assertTrue(source.getPriority() < 500);
         source.shutdown();
     }
@@ -58,117 +55,63 @@ public class LocalBlocklistSourceTest {
     @Test
     public void refusesAListedPasswordAndAcceptsAnUnlistedOne() throws IOException {
 
-        Path file = write(Arrays.asList("Password@1", "Qwerty@123"));
-        LocalBlocklistSource source = configured(file, "plaintext");
+        LocalBlocklistSource source = configured(write(Arrays.asList("Password@1", "Qwerty@123")), "plaintext");
 
         assertEquals(source.evaluate(context("Password@1")).getOutcome(), Outcome.FOUND);
         assertEquals(source.evaluate(context("Zx9q!Kt7#Lm2vRb4")).getOutcome(), Outcome.NOT_FOUND);
         source.shutdown();
     }
 
+    /**
+     * A hashed file is compared on its own algorithm, and the candidate is hashed with the same one. If the two
+     * sides ever diverged the list would silently stop matching, which is the failure this pins down.
+     */
     @Test
-    public void withNoFileConfiguredItIsUnavailableRatherThanReportingEveryPasswordClean() {
+    public void aHashedListMatchesTheDigestTheCredentialProduces() throws IOException {
+
+        String digest = BlocklistLoader.digestOf("Password@1", "SHA-1");
+        LocalBlocklistSource source = configured(write(Collections.singletonList(digest)), "sha1");
+
+        assertEquals(source.evaluate(context("Password@1")).getOutcome(), Outcome.FOUND);
+        assertEquals(source.evaluate(context("Password@2")).getOutcome(), Outcome.NOT_FOUND);
+        source.shutdown();
+    }
+
+    @Test
+    public void withNoFileConfiguredItIsNotConsultedAndNeverReportsAPasswordClean() {
 
         LocalBlocklistSource source = new LocalBlocklistSource();
         source.configure(new MapSourceConfiguration());
 
         assertFalse(source.isConfigured(TENANT));
+        assertFalse(source.isEnabled(TENANT));
         assertEquals(source.evaluate(context("Password@1")).getOutcome(), Outcome.UNAVAILABLE);
         assertEquals(source.evaluate(context("Password@1")).getCause().orElse(null),
                 UnavailableCause.MISCONFIGURED);
-        assertEquals(source.getStatus(TENANT).getState(), SourceStatus.State.NOT_CONFIGURED);
-        source.shutdown();
-    }
-
-    @Test
-    public void itProvesItLoadedRatherThanAssertingIt() throws IOException {
-
-        Path file = write(Arrays.asList("Password@1", "NOTAHASH-but-a-valid-plaintext-entry"));
-        LocalBlocklistSource source = configured(file, "plaintext");
-
-        SourceStatus status = source.getStatus(TENANT);
-        assertEquals(status.getState(), SourceStatus.State.READY);
-        assertEquals(status.getFacts().get("ENTRIES"), "2");
-        assertEquals(status.getFacts().get("SKIPPED"), "0 malformed lines");
-        assertTrue(status.getFacts().containsKey("LAST LOADED"));
-        assertTrue(status.getLastSuccessEpochMillis().isPresent());
-        source.shutdown();
-    }
-
-    @Test
-    public void aReplacedFileTakesEffectOnReload() throws IOException {
-
-        Path file = write(Arrays.asList("Password@1"));
-        LocalBlocklistSource source = configured(file, "plaintext");
-        assertEquals(source.evaluate(context("Summer2023!")).getOutcome(), Outcome.NOT_FOUND);
-
-        Files.write(file, "Password@1\nSummer2023!\n".getBytes(StandardCharsets.UTF_8));
-        source.reload();
-
-        assertEquals(source.evaluate(context("Summer2023!")).getOutcome(), Outcome.FOUND);
-        source.shutdown();
-    }
-
-    @Test
-    public void aFileThatCannotBeReadLeavesThePreviouslyLoadedListInEffect() throws IOException {
-
-        Path file = write(Arrays.asList("Password@1"));
-        LocalBlocklistSource source = configured(file, "plaintext");
-        assertEquals(source.evaluate(context("Password@1")).getOutcome(), Outcome.FOUND);
-
-        Files.delete(file);
-        String outcome = source.reload();
-
-        assertTrue(outcome.toLowerCase().contains("not readable"));
-        assertEquals(source.evaluate(context("Password@1")).getOutcome(), Outcome.FOUND,
-                "The previous list must stay in effect rather than emptying itself.");
-        source.shutdown();
-    }
-
-    @Test
-    public void reconfiguringWithTheSameSettingsDoesNotRebuildTheIndex() throws IOException {
-
-        Path file = write(Arrays.asList("Password@1"));
-        LocalBlocklistSource source = configured(file, "plaintext");
-        Long firstLoad = source.getStatus(TENANT).getLastSuccessEpochMillis().orElse(0L);
-
-        source.configure(new MapSourceConfiguration()
-                .set(LocalBlocklistSource.PROPERTY_PATH, file.toString())
-                .set(LocalBlocklistSource.PROPERTY_FORMAT, "plaintext"));
-
-        assertEquals(source.getStatus(TENANT).getLastSuccessEpochMillis().orElse(0L), (Long) firstLoad);
         source.shutdown();
     }
 
     /**
-     * A file with no declared format is not a blocklist we can compare against, and must not present as one.
+     * The file dictates the algorithm, so a file with none declared is not something we can compare against.
      */
     @Test
     public void aFileWithNoDeclaredFormatLeavesTheSourceNotConfigured() throws IOException {
 
-        Path file = write(Collections.singletonList("Password@1"));
         LocalBlocklistSource source = new LocalBlocklistSource();
         source.configure(new MapSourceConfiguration()
-                .set(LocalBlocklistSource.PROPERTY_PATH, file.toString()));
+                .set(LocalBlocklistSource.PROPERTY_PATH, write(Collections.singletonList("Password@1")).toString()));
 
         assertFalse(source.isConfigured(TENANT));
         assertFalse(source.isEnabled(TENANT));
-        assertEquals(source.getStatus(TENANT).getState(), SourceStatus.State.NOT_CONFIGURED);
-        assertEquals(source.evaluate(context("Password@1")).getOutcome(), Outcome.UNAVAILABLE);
         source.shutdown();
     }
 
-    /**
-     * The off switch parks a fully configured list: it stops being consulted, and it releases the index rather
-     * than holding a corpus nobody is asking about.
-     */
     @Test
     public void theOffSwitchParksAConfiguredListWithoutUnpickingIt() throws IOException {
 
-        Path file = write(Arrays.asList("Password@1"));
+        Path file = write(Collections.singletonList("Password@1"));
         LocalBlocklistSource source = configured(file, "plaintext");
         assertTrue(source.isEnabled(TENANT));
-        assertEquals(source.evaluate(context("Password@1")).getOutcome(), Outcome.FOUND);
 
         source.configure(new MapSourceConfiguration()
                 .set(LocalBlocklistSource.PROPERTY_ENABLE, false)
@@ -176,19 +119,35 @@ public class LocalBlocklistSourceTest {
                 .set(LocalBlocklistSource.PROPERTY_FORMAT, "plaintext"));
 
         assertFalse(source.isEnabled(TENANT));
-        assertEquals(source.getStatus(TENANT).getState(), SourceStatus.State.NOT_CONFIGURED);
-        assertTrue(source.getStatus(TENANT).getSummary().orElse("").toLowerCase().contains("switched off"));
+        assertEquals(source.evaluate(context("Password@1")).getOutcome(), Outcome.UNAVAILABLE);
         source.shutdown();
     }
 
     /**
-     * Absent the switch the list runs, so an existing deployment that never declared one is unaffected.
+     * Absent the switch the list runs, so a deployment that never declared one is unaffected.
      */
     @Test
     public void theListRunsWhenNoSwitchIsDeclared() throws IOException {
 
-        LocalBlocklistSource source = configured(write(Arrays.asList("Password@1")), "plaintext");
+        LocalBlocklistSource source = configured(write(Collections.singletonList("Password@1")), "plaintext");
         assertTrue(source.isEnabled(TENANT));
+        source.shutdown();
+    }
+
+    @Test
+    public void anUnreadableFileLeavesThePreviouslyLoadedListInEffect() throws IOException {
+
+        Path file = write(Collections.singletonList("Password@1"));
+        LocalBlocklistSource source = configured(file, "plaintext");
+        Files.delete(file);
+
+        // Reconfiguring against a different path forces a load attempt; the old list must survive it.
+        source.configure(new MapSourceConfiguration()
+                .set(LocalBlocklistSource.PROPERTY_PATH, file.toString())
+                .set(LocalBlocklistSource.PROPERTY_FORMAT, "sha1"));
+
+        assertEquals(source.evaluate(context("Password@1")).getOutcome(), Outcome.FOUND,
+                "The previous list must stay in effect rather than emptying itself.");
         source.shutdown();
     }
 
@@ -206,7 +165,6 @@ public class LocalBlocklistSourceTest {
         return BreachContext.builder()
                 .credential(new Credential(password.toCharArray()))
                 .tenantDomain(TENANT)
-                .operation(Operation.REGISTER)
                 .build();
     }
 

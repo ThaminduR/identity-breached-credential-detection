@@ -16,20 +16,18 @@
  * under the License.
  */
 
-package org.wso2.carbon.identity.breach.detection.mgt;
+package org.wso2.carbon.identity.breach.detection.engine;
 
 /**
- * What an administrator is told the capability is actually doing.
+ * What the capability was actually doing when a password was evaluated.
  * <p>
- * The distinction between {@link #ENFORCING} and everything below it is the point of the whole design: an
- * administrator must never see <em>Enforcing</em> when nothing can produce a verdict.
+ * The distinction between {@link #ENFORCING} and everything below it is the point of the whole design, and it
+ * is why {@link #NOT_ENFORCING} is logged at a severity that supports alerting: nothing may look healthy while
+ * no verdict can be produced.
  */
 public enum EnforcementStatus {
 
-    /** Switched off at deployment level. Tenant policy is retained and unchanged. */
-    DISABLED,
-
-    /** Switched off for this organization. */
+    /** No source is enabled here, so nothing is being checked. */
     OFF,
 
     /** Every enabled source is answering. */

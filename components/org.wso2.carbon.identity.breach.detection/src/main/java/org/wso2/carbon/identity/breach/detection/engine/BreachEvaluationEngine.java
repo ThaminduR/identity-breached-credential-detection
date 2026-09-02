@@ -20,13 +20,10 @@ package org.wso2.carbon.identity.breach.detection.engine;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.wso2.carbon.identity.breach.detection.mgt.EnforcementStatus;
-import org.wso2.carbon.identity.breach.detection.metrics.BreachMetrics;
 import org.wso2.carbon.identity.breach.source.BreachContext;
 import org.wso2.carbon.identity.breach.source.BreachSource;
 import org.wso2.carbon.identity.breach.source.BreachSourceException;
 import org.wso2.carbon.identity.breach.source.BreachVerdict;
-import org.wso2.carbon.identity.breach.source.Capability;
 import org.wso2.carbon.identity.breach.source.FailureAction;
 import org.wso2.carbon.identity.breach.source.Outcome;
 import org.wso2.carbon.identity.breach.source.UnavailableCause;
@@ -55,15 +52,12 @@ public class BreachEvaluationEngine {
     private static final Log LOG = LogFactory.getLog(BreachEvaluationEngine.class);
 
     private final SourceRegistry registry;
-    private final BreachMetrics metrics;
     private final ThreadPoolExecutor executor;
     private final int timeoutMs;
 
-    public BreachEvaluationEngine(SourceRegistry registry, BreachMetrics metrics, int workerThreads,
-                                  int timeoutMs) {
+    public BreachEvaluationEngine(SourceRegistry registry, int workerThreads, int timeoutMs) {
 
         this.registry = registry;
-        this.metrics = metrics;
         this.timeoutMs = timeoutMs;
         int threads = Math.max(1, workerThreads);
         AtomicInteger counter = new AtomicInteger();
@@ -102,10 +96,7 @@ public class BreachEvaluationEngine {
         List<BreachVerdict> verdicts = new ArrayList<>(plan.size());
 
         for (BreachSource source : plan) {
-            long started = System.nanoTime();
             BreachVerdict verdict = call(source, context, credentialInFlight);
-            metrics.record(context.getTenantDomain(), source.getId(), verdict.getOutcome(),
-                    verdict.getCause().orElse(null), System.nanoTime() - started);
             verdicts.add(verdict);
             if (verdict.getOutcome() == Outcome.FOUND) {
                 // A match ends it. Nothing after this needs asking, and no network call is worth making.
@@ -162,7 +153,7 @@ public class BreachEvaluationEngine {
             return contain(sourceId, t);
         }
 
-        if (source.getCapabilities().contains(Capability.OFFLINE)) {
+        if (source.isOffline()) {
             // In-process and answering in microseconds. A thread hand-off would cost more than the lookup.
             return invoke(source, context);
         }

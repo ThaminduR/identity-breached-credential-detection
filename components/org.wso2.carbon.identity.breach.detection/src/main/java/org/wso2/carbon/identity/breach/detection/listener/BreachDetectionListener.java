@@ -28,12 +28,9 @@ import org.wso2.carbon.identity.breach.detection.internal.BreachDetectionDataHol
 import org.wso2.carbon.identity.breach.detection.util.BreachDetectionUtils;
 import org.wso2.carbon.identity.breach.source.BreachContext;
 import org.wso2.carbon.identity.breach.source.Credential;
-import org.wso2.carbon.identity.breach.source.Operation;
-import org.wso2.carbon.identity.breach.source.Subject;
 import org.wso2.carbon.identity.core.AbstractIdentityUserOperationEventListener;
 import org.wso2.carbon.identity.core.context.IdentityContext;
 import org.wso2.carbon.identity.core.context.model.Flow;
-import org.wso2.carbon.identity.core.context.model.Organization;
 import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.mgt.policy.PolicyViolationException;
@@ -77,21 +74,21 @@ public class BreachDetectionListener extends AbstractIdentityUserOperationEventL
             throws UserStoreException {
 
         // Self-registration, administrative user creation, and invitation completion all arrive here.
-        return check(userName, null, credential, userStoreManager, Operation.REGISTER);
+        return check(credential, userStoreManager);
     }
 
     @Override
     public boolean doPreUpdateCredential(String userName, Object newCredential, Object oldCredential,
                                          UserStoreManager userStoreManager) throws UserStoreException {
 
-        return check(userName, null, newCredential, userStoreManager, Operation.SELF_UPDATE);
+        return check(newCredential, userStoreManager);
     }
 
     @Override
     public boolean doPreUpdateCredentialWithID(String userID, Object newCredential, Object oldCredential,
                                                UserStoreManager userStoreManager) throws UserStoreException {
 
-        return check(null, userID, newCredential, userStoreManager, Operation.SELF_UPDATE);
+        return check(newCredential, userStoreManager);
     }
 
     @Override
@@ -99,7 +96,7 @@ public class BreachDetectionListener extends AbstractIdentityUserOperationEventL
                                                 UserStoreManager userStoreManager) throws UserStoreException {
 
         // Administrative reset, and the reset that completes a recovery flow.
-        return check(userName, null, newCredential, userStoreManager, Operation.ADMIN_RESET);
+        return check(newCredential, userStoreManager);
     }
 
     @Override
@@ -107,11 +104,10 @@ public class BreachDetectionListener extends AbstractIdentityUserOperationEventL
                                                       UserStoreManager userStoreManager)
             throws UserStoreException {
 
-        return check(null, userID, newCredential, userStoreManager, Operation.ADMIN_RESET);
+        return check(newCredential, userStoreManager);
     }
 
-    private boolean check(String userName, String userId, Object credential, UserStoreManager userStoreManager,
-                          Operation fallbackOperation) throws UserStoreException {
+    private boolean check(Object credential, UserStoreManager userStoreManager) throws UserStoreException {
 
         if (!isEnable()) {
             return true;
@@ -128,24 +124,15 @@ public class BreachDetectionListener extends AbstractIdentityUserOperationEventL
             return true;
         }
 
-        Flow flow = currentFlow();
-        if (isExemptBulkWrite(flow)) {
+        if (isExemptBulkWrite(currentFlow())) {
             return true;
         }
-
-        String tenantDomain = resolveTenantDomain(userStoreManager);
 
         // A copy, so clearing it after evaluation cannot corrupt the write that follows.
         Credential candidate = new Credential(Arrays.copyOf(chars, chars.length));
         BreachContext context = BreachContext.builder()
                 .credential(candidate)
-                .subject(Subject.builder(userName)
-                        .userId(userId)
-                        .userStoreDomain(resolveUserStoreDomain(userStoreManager))
-                        .build())
-                .tenantDomain(tenantDomain)
-                .organizationId(resolveOrganizationId())
-                .operation(resolveOperation(flow, fallbackOperation))
+                .tenantDomain(resolveTenantDomain(userStoreManager))
                 .build();
 
         // The engine owns the copy from here: it clears it before returning, or leaves it to the collector
@@ -195,29 +182,6 @@ public class BreachDetectionListener extends AbstractIdentityUserOperationEventL
                 && BreachDetectionConfig.getInstance().isBulkExempt();
     }
 
-    private Operation resolveOperation(Flow flow, Operation fallback) {
-
-        if (flow == null || flow.getName() == null) {
-            return fallback;
-        }
-        boolean administrative = flow.getInitiatingPersona() == Flow.InitiatingPersona.ADMIN;
-        switch (flow.getName()) {
-            case REGISTER:
-            case JUST_IN_TIME_PROVISION:
-                return Operation.REGISTER;
-            case INVITE:
-            case INVITED_USER_REGISTRATION:
-                return Operation.INVITE;
-            case PASSWORD_RESET:
-            case CREDENTIAL_RESET:
-                return administrative ? Operation.ADMIN_RESET : Operation.RECOVERY;
-            case CREDENTIAL_UPDATE:
-            case CREDENTIAL_ENROLL:
-                return administrative ? Operation.ADMIN_RESET : Operation.SELF_UPDATE;
-            default:
-                return fallback;
-        }
-    }
 
     private Flow currentFlow() {
 
@@ -230,16 +194,6 @@ public class BreachDetectionListener extends AbstractIdentityUserOperationEventL
         }
     }
 
-    private String resolveOrganizationId() {
-
-        try {
-            IdentityContext context = IdentityContext.getThreadLocalIdentityContext();
-            Organization organization = context == null ? null : context.getOrganization();
-            return organization == null ? null : organization.getId();
-        } catch (Throwable t) {
-            return null;
-        }
-    }
 
     private String resolveTenantDomain(UserStoreManager userStoreManager) {
 
@@ -255,15 +209,6 @@ public class BreachDetectionListener extends AbstractIdentityUserOperationEventL
         return MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
     }
 
-    private String resolveUserStoreDomain(UserStoreManager userStoreManager) {
-
-        try {
-            return userStoreManager.getRealmConfiguration()
-                    .getUserStoreProperty("DomainName");
-        } catch (Throwable t) {
-            return null;
-        }
-    }
 
     /**
      * The credential arrives as a {@link Secret} for listeners that handle secrets and as a character sequence

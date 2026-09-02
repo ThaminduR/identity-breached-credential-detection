@@ -19,28 +19,24 @@
 package org.wso2.carbon.identity.breach.source;
 
 import java.util.Optional;
-import java.util.OptionalLong;
 
 /**
  * What one source concluded, and - when it could not conclude anything - why.
  * <p>
- * Occurrence counts are operator- and telemetry-facing only. They are deliberately never shown to an end user:
- * a count invites treating a smaller number as safer and offers nothing actionable.
+ * Deliberately carries no occurrence count. A count is never shown to an end user - it invites treating a
+ * smaller number as safer and offers nothing actionable - and nothing else needs one.
  */
 public final class BreachVerdict {
 
     private final Outcome outcome;
     private final String sourceId;
-    private final Long occurrences;
     private final UnavailableCause cause;
     private final String detail;
 
-    private BreachVerdict(Outcome outcome, String sourceId, Long occurrences, UnavailableCause cause,
-                          String detail) {
+    private BreachVerdict(Outcome outcome, String sourceId, UnavailableCause cause, String detail) {
 
         this.outcome = outcome;
         this.sourceId = sourceId;
-        this.occurrences = occurrences;
         this.cause = cause;
         this.detail = detail;
     }
@@ -48,24 +44,12 @@ public final class BreachVerdict {
     /**
      * The password is in this source's corpus.
      *
-     * @param sourceId    reporting source.
-     * @param occurrences how many records, or a negative value when the source does not count.
-     * @return the verdict.
-     */
-    public static BreachVerdict found(String sourceId, long occurrences) {
-
-        return new BreachVerdict(Outcome.FOUND, sourceId, occurrences < 0 ? null : occurrences, null, null);
-    }
-
-    /**
-     * The password is in this source's corpus, with no count available.
-     *
      * @param sourceId reporting source.
      * @return the verdict.
      */
     public static BreachVerdict found(String sourceId) {
 
-        return new BreachVerdict(Outcome.FOUND, sourceId, null, null, null);
+        return new BreachVerdict(Outcome.FOUND, sourceId, null, null);
     }
 
     /**
@@ -76,7 +60,7 @@ public final class BreachVerdict {
      */
     public static BreachVerdict notFound(String sourceId) {
 
-        return new BreachVerdict(Outcome.NOT_FOUND, sourceId, null, null, null);
+        return new BreachVerdict(Outcome.NOT_FOUND, sourceId, null, null);
     }
 
     /**
@@ -89,7 +73,7 @@ public final class BreachVerdict {
      */
     public static BreachVerdict unavailable(String sourceId, UnavailableCause cause, String detail) {
 
-        return new BreachVerdict(Outcome.UNAVAILABLE, sourceId, null,
+        return new BreachVerdict(Outcome.UNAVAILABLE, sourceId,
                 cause == null ? UnavailableCause.INTERNAL : cause, detail);
     }
 
@@ -103,10 +87,6 @@ public final class BreachVerdict {
         return sourceId;
     }
 
-    public OptionalLong getOccurrences() {
-
-        return occurrences == null ? OptionalLong.empty() : OptionalLong.of(occurrences);
-    }
 
     public Optional<UnavailableCause> getCause() {
 

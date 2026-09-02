@@ -18,7 +18,6 @@
 
 package org.wso2.carbon.identity.breach.detection.engine;
 
-import org.wso2.carbon.identity.breach.detection.mgt.EnforcementStatus;
 import org.wso2.carbon.identity.breach.source.BreachVerdict;
 
 import java.util.Collections;

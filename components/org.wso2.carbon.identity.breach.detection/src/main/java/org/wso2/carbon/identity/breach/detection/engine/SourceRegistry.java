@@ -59,7 +59,7 @@ public class SourceRegistry {
                     + "service replaces it.");
         }
         LOG.info("Breach source bound: id=" + source.getId() + ", priority=" + source.getPriority()
-                + ", capabilities=" + source.getCapabilities() + ". Bound sources are now " + describe() + ".");
+                + ". Bound sources are now " + describe() + ".");
     }
 
     public void unbind(BreachSource source) {

@@ -25,28 +25,22 @@ import java.util.Optional;
  * <p>
  * The core does not know a connector's settings, so the connector declares them and the core resolves the
  * values - the connector reads no file and holds no vault handle of its own. The {@code secret} flag is what
- * makes that enforceable: a secret is resolved through the platform secret store, is never written to the
- * tenant governance store, and is never returned by any management API.
+ * makes that enforceable: a secret is resolved through the platform secret store and is never reachable as a
+ * plain value.
  */
 public final class PropertyDescriptor {
 
     private final String name;
-    private final PropertyType type;
     private final boolean required;
     private final boolean secret;
     private final String defaultValue;
-    private final String displayName;
-    private final String description;
 
     private PropertyDescriptor(Builder builder) {
 
         this.name = builder.name;
-        this.type = builder.type;
         this.required = builder.required;
         this.secret = builder.secret;
         this.defaultValue = builder.defaultValue;
-        this.displayName = builder.displayName == null ? builder.name : builder.displayName;
-        this.description = builder.description;
     }
 
     /**
@@ -57,11 +51,9 @@ public final class PropertyDescriptor {
         return name;
     }
 
-    public PropertyType getType() {
-
-        return type;
-    }
-
+    /**
+     * @return {@code true} if the source cannot work without it. Reported at load when it is missing.
+     */
     public boolean isRequired() {
 
         return required;
@@ -80,19 +72,9 @@ public final class PropertyDescriptor {
         return Optional.ofNullable(defaultValue);
     }
 
-    public String getDisplayName() {
+    public static Builder builder(String name) {
 
-        return displayName;
-    }
-
-    public Optional<String> getDescription() {
-
-        return Optional.ofNullable(description);
-    }
-
-    public static Builder builder(String name, PropertyType type) {
-
-        return new Builder(name, type);
+        return new Builder(name);
     }
 
     /**
@@ -101,17 +83,13 @@ public final class PropertyDescriptor {
     public static final class Builder {
 
         private final String name;
-        private final PropertyType type;
         private boolean required;
         private boolean secret;
         private String defaultValue;
-        private String displayName;
-        private String description;
 
-        private Builder(String name, PropertyType type) {
+        private Builder(String name) {
 
             this.name = name;
-            this.type = type;
         }
 
         public Builder required(boolean required) {
@@ -129,18 +107,6 @@ public final class PropertyDescriptor {
         public Builder defaultValue(String defaultValue) {
 
             this.defaultValue = defaultValue;
-            return this;
-        }
-
-        public Builder displayName(String displayName) {
-
-            this.displayName = displayName;
-            return this;
-        }
-
-        public Builder description(String description) {
-
-            this.description = description;
             return this;
         }
 

@@ -20,14 +20,10 @@ package org.wso2.carbon.identity.breach.detection.engine;
 
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
-import org.wso2.carbon.identity.breach.detection.mgt.EnforcementStatus;
-import org.wso2.carbon.identity.breach.detection.metrics.BreachMetrics;
 import org.wso2.carbon.identity.breach.source.BreachContext;
 import org.wso2.carbon.identity.breach.source.BreachVerdict;
 import org.wso2.carbon.identity.breach.source.Credential;
 import org.wso2.carbon.identity.breach.source.FailureAction;
-import org.wso2.carbon.identity.breach.source.Operation;
-import org.wso2.carbon.identity.breach.source.Subject;
 import org.wso2.carbon.identity.breach.source.UnavailableCause;
 
 import static org.testng.Assert.assertEquals;
@@ -50,7 +46,7 @@ public class BreachEvaluationEngineTest {
     public void setUp() {
 
         registry = new SourceRegistry();
-        engine = new BreachEvaluationEngine(registry, new BreachMetrics(), 4, 500);
+        engine = new BreachEvaluationEngine(registry, 4, 500);
     }
 
     @Test
@@ -77,7 +73,7 @@ public class BreachEvaluationEngineTest {
     public void anyFoundRefusesAsBreached() {
 
         registry.bind(StubBreachSource.offline("localList", 100, c -> BreachVerdict.notFound("localList")));
-        registry.bind(StubBreachSource.remote("hibp", 500, c -> BreachVerdict.found("hibp", 612953)));
+        registry.bind(StubBreachSource.remote("hibp", 500, c -> BreachVerdict.found("hibp")));
 
         EvaluationResult result = engine.evaluate(context());
 
@@ -239,9 +235,7 @@ public class BreachEvaluationEngineTest {
 
         return BreachContext.builder()
                 .credential(new Credential("Password@1".toCharArray()))
-                .subject(Subject.builder("alice").build())
                 .tenantDomain(TENANT)
-                .operation(Operation.REGISTER)
-                .build();
+                                .build();
     }
 }

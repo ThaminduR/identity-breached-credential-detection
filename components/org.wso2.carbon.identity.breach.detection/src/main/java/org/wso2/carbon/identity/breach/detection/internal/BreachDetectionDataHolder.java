@@ -20,7 +20,6 @@ package org.wso2.carbon.identity.breach.detection.internal;
 
 import org.wso2.carbon.identity.breach.detection.engine.BreachEvaluationEngine;
 import org.wso2.carbon.identity.breach.detection.engine.SourceRegistry;
-import org.wso2.carbon.identity.breach.detection.metrics.BreachMetrics;
 import org.wso2.carbon.identity.breach.detection.source.LocalBlocklistSource;
 import org.wso2.carbon.user.core.service.RealmService;
 
@@ -32,7 +31,6 @@ public class BreachDetectionDataHolder {
     private static final BreachDetectionDataHolder INSTANCE = new BreachDetectionDataHolder();
 
     private final SourceRegistry sourceRegistry = new SourceRegistry();
-    private final BreachMetrics metrics = new BreachMetrics();
 
     private RealmService realmService;
     private BreachEvaluationEngine evaluationEngine;
@@ -50,11 +48,6 @@ public class BreachDetectionDataHolder {
     public SourceRegistry getSourceRegistry() {
 
         return sourceRegistry;
-    }
-
-    public BreachMetrics getMetrics() {
-
-        return metrics;
     }
 
     public RealmService getRealmService() {

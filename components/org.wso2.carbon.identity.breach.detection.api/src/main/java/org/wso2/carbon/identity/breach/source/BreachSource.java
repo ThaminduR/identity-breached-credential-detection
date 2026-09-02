@@ -19,39 +19,33 @@
 package org.wso2.carbon.identity.breach.source;
 
 import java.util.Collections;
-import java.util.EnumSet;
 import java.util.List;
 
 /**
  * A breach-intelligence source, published as an OSGi service.
  * <p>
- * The engine <em>discovers</em> sources rather than knowing them, so a source has to describe itself well
- * enough that the engine can order it, the configuration layer can resolve its settings, and the Console can
- * render it - none of which can be hard-coded against a source that did not exist when the core was built.
+ * The engine <em>discovers</em> sources rather than knowing them, so a source describes itself well enough that
+ * the engine can order it and the configuration layer can resolve its settings - neither of which can be
+ * hard-coded against a source that did not exist when the core was built.
  * <p>
  * Register from a connector's activator:
  * <pre>{@code
  * bundleContext.registerService(BreachSource.class, new HibpBreachSource(), null);
  * }</pre>
  * <p>
- * Everything but {@link #getId()}, {@link #getDescriptor()} and {@link #evaluate(BreachContext)} has a default,
- * and the contract gains default methods rather than abstract ones, so an existing connector keeps compiling
- * across additive revisions.
+ * Everything but {@link #getId()} and {@link #evaluate(BreachContext)} has a default, and the contract gains
+ * default methods rather than abstract ones, so an existing connector keeps compiling across additive
+ * revisions.
  */
 public interface BreachSource {
 
     /**
-     * A stable id. Tenant policy names sources by it, deployment configuration is namespaced on it
-     * ({@code [breach_detection.sources.<id>]}), and telemetry is labelled with it. Lowercase, no spaces.
+     * A stable id. Deployment configuration is namespaced on it ({@code [breach_detection.sources.<id>]}) and
+     * log lines are labelled with it. Lowercase, no spaces.
      *
      * @return the source id.
      */
     String getId();
-
-    /**
-     * @return how this source presents itself to an administrator.
-     */
-    Descriptor getDescriptor();
 
     /**
      * The deployment settings this source needs. The core resolves them and hands them back through
@@ -76,16 +70,21 @@ public interface BreachSource {
     }
 
     /**
-     * @return what this source is and what it needs.
+     * Whether this source answers without crossing the deployment boundary.
+     * <p>
+     * An offline source is called on the calling thread: it answers in microseconds, so a thread hand-off would
+     * cost more than the lookup. Anything else is bounded by the configured timeout on a worker thread.
+     *
+     * @return {@code true} if no network call is involved.
      */
-    default EnumSet<Capability> getCapabilities() {
+    default boolean isOffline() {
 
-        return EnumSet.of(Capability.PASSWORD_ONLY);
+        return false;
     }
 
     /**
-     * Hand the source its resolved deployment settings. Called on bind and again whenever configuration is
-     * reloaded. A source must tolerate being reconfigured while evaluations are in flight.
+     * Hand the source its resolved deployment settings. Called on bind. A source must tolerate being
+     * reconfigured while evaluations are in flight.
      *
      * @param configuration resolved settings for this source.
      */
@@ -108,10 +107,10 @@ public interface BreachSource {
     /**
      * Whether this organization wants this source consulted.
      * <p>
-     * The source owns this decision, and owns whatever configuration surface it needs to let an
-     * administrator make it. A source backed by a file answers from whether the file loaded; a source
-     * backed by a hosted service answers from its own governance configuration, which is also what gives it
-     * a Console presence when its bundle is installed and takes that presence away when it is removed.
+     * The source owns this decision, and owns whatever configuration surface it needs to let an administrator
+     * make it. A source backed by a file answers from whether the file loaded; a source backed by a hosted
+     * service answers from its own governance configuration, which is also what gives it a Console presence
+     * when its bundle is installed and takes that presence away when it is removed.
      * <p>
      * The default is {@code false}, so a source is consulted only when it says so.
      *
@@ -135,25 +134,13 @@ public interface BreachSource {
     }
 
     /**
-     * What this source reports about itself, for the administrator surface.
-     *
-     * @param tenantDomain the tenant asking.
-     * @return the status.
-     */
-    default SourceStatus getStatus(String tenantDomain) {
-
-        return SourceStatus.builder(isConfigured(tenantDomain)
-                ? SourceStatus.State.READY : SourceStatus.State.NOT_CONFIGURED).build();
-    }
-
-    /**
      * Reach a verdict on the candidate password.
      * <p>
      * Return {@link Outcome#UNAVAILABLE} - or throw {@link BreachSourceException} - for anything that is not a
      * positive determination. Never return {@link Outcome#NOT_FOUND} because a call failed. Never log, cache,
      * or transmit the credential in a recoverable form, and never retain it past this call.
      *
-     * @param context the candidate password and its surrounding operation.
+     * @param context the candidate password and where it is being set.
      * @return the verdict.
      * @throws BreachSourceException if no verdict could be produced.
      */
