@@ -127,6 +127,6 @@ public class ResolvedSourceConfigurationTest {
     private ResolvedSourceConfiguration resolve(Map<String, String> values) {
 
         return new ResolvedSourceConfiguration("test",
-                DESCRIPTORS, new SourceNamespace("test", values));
+                DESCRIPTORS, values);
     }
 }

@@ -21,7 +21,6 @@ package org.wso2.carbon.identity.breach.detection.internal;
 import org.wso2.carbon.identity.breach.detection.engine.BreachEvaluationEngine;
 import org.wso2.carbon.identity.breach.detection.engine.SourceRegistry;
 import org.wso2.carbon.identity.breach.detection.source.LocalBlocklistSource;
-import org.wso2.carbon.user.core.service.RealmService;
 
 /**
  * Wiring, held in one place so the listener and the management service reach the same instances.
@@ -32,7 +31,6 @@ public class BreachDetectionDataHolder {
 
     private final SourceRegistry sourceRegistry = new SourceRegistry();
 
-    private RealmService realmService;
     private BreachEvaluationEngine evaluationEngine;
     private LocalBlocklistSource localBlocklistSource;
 
@@ -50,15 +48,6 @@ public class BreachDetectionDataHolder {
         return sourceRegistry;
     }
 
-    public RealmService getRealmService() {
-
-        return realmService;
-    }
-
-    public void setRealmService(RealmService realmService) {
-
-        this.realmService = realmService;
-    }
 
     public BreachEvaluationEngine getEvaluationEngine() {
 

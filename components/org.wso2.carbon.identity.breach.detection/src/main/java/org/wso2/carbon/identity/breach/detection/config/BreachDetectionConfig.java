@@ -52,7 +52,7 @@ public class BreachDetectionConfig {
     private final boolean enabledAtDeployment;
     private final int listenerOrder;
     private final Map<String, String> globalProperties;
-    private final Map<String, SourceNamespace> sourceNamespaces;
+    private final Map<String, Map<String, String>> sourceProperties;
 
     private BreachDetectionConfig() {
 
@@ -65,10 +65,10 @@ public class BreachDetectionConfig {
                 ? BreachDetectionConstants.DEFAULT_LISTENER_ORDER : listenerConfig.getOrder();
 
         Map<String, String> globals = new LinkedHashMap<>();
-        Map<String, SourceNamespace> namespaces = new LinkedHashMap<>();
-        parse(globals, namespaces);
+        Map<String, Map<String, String>> sources = new LinkedHashMap<>();
+        parse(globals, sources);
         this.globalProperties = Collections.unmodifiableMap(globals);
-        this.sourceNamespaces = Collections.unmodifiableMap(namespaces);
+        this.sourceProperties = Collections.unmodifiableMap(sources);
     }
 
     public static BreachDetectionConfig getInstance() {
@@ -116,20 +116,21 @@ public class BreachDetectionConfig {
     }
 
     /**
-     * @return per-source configuration, keyed by normalized source id.
+     * @return the configured settings for every source namespace, keyed by normalized source id, with any
+     * {@code $secret{alias}} reference already resolved.
      */
-    public Map<String, SourceNamespace> getSourceNamespaces() {
+    public Map<String, Map<String, String>> getSourceProperties() {
 
-        return sourceNamespaces;
+        return sourceProperties;
     }
 
     /**
      * @param normalizedSourceId key from {@link BreachDetectionUtils#normalizeSourceId(String)}.
-     * @return the namespace, or {@code null} if the operator configured none.
+     * @return the settings written under that namespace, or {@code null} if the operator configured none.
      */
-    public SourceNamespace getSourceNamespace(String normalizedSourceId) {
+    public Map<String, String> getSourceProperties(String normalizedSourceId) {
 
-        return sourceNamespaces.get(normalizedSourceId);
+        return sourceProperties.get(normalizedSourceId);
     }
 
     public int getEvaluationTimeoutMs() {
@@ -156,7 +157,7 @@ public class BreachDetectionConfig {
                 BreachDetectionConstants.DEFAULT_WORKER_THREADS);
     }
 
-    private void parse(Map<String, String> globals, Map<String, SourceNamespace> namespaces) {
+    private void parse(Map<String, String> globals, Map<String, Map<String, String>> sources) {
 
         OMElement root;
         try {
@@ -183,14 +184,14 @@ public class BreachDetectionConfig {
             } else if (BreachDetectionConstants.CONFIG_SOURCES_ELEMENT.equals(localName)) {
                 for (OMElement source : children(element)) {
                     if (BreachDetectionConstants.CONFIG_SOURCE_ELEMENT.equals(source.getLocalName())) {
-                        parseSource(source, namespaces, secrets);
+                        parseSource(source, sources, secrets);
                     }
                 }
             }
         }
     }
 
-    private void parseSource(OMElement sourceElement, Map<String, SourceNamespace> namespaces,
+    private void parseSource(OMElement sourceElement, Map<String, Map<String, String>> sources,
                              SecretResolutionSupport secrets) {
 
         String id = attribute(sourceElement, BreachDetectionConstants.CONFIG_ATTRIBUTE_ID);
@@ -216,7 +217,7 @@ public class BreachDetectionConfig {
             // A secret that could not be resolved stays absent rather than being stored as its own alias.
             properties.put(name, alias == null ? value : (secrets == null ? null : secrets.resolve(alias)));
         }
-        namespaces.put(BreachDetectionUtils.normalizeSourceId(id), new SourceNamespace(id, properties));
+        sources.put(BreachDetectionUtils.normalizeSourceId(id), properties);
     }
 
     /**

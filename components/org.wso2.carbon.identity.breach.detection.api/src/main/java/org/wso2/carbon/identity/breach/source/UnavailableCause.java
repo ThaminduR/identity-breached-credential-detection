@@ -45,9 +45,6 @@ public enum UnavailableCause {
     /** Repeated failure opened the circuit breaker; the source is not being called. */
     CIRCUIT_OPEN,
 
-    /** Tenant policy names a source id with no bound service - usually a missing connector JAR. */
-    SOURCE_NOT_REGISTERED,
-
     /** An unexpected error inside the source. Contained to that source. */
     INTERNAL
 }

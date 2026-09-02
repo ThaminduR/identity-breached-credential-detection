@@ -23,7 +23,7 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.breach.detection.config.BreachDetectionConfig;
 import org.wso2.carbon.identity.breach.detection.constants.BreachDetectionConstants;
 import org.wso2.carbon.identity.breach.detection.engine.BreachEvaluationEngine;
-import org.wso2.carbon.identity.breach.detection.engine.EvaluationResult;
+import org.wso2.carbon.identity.breach.detection.engine.Decision;
 import org.wso2.carbon.identity.breach.detection.internal.BreachDetectionDataHolder;
 import org.wso2.carbon.identity.breach.detection.util.BreachDetectionUtils;
 import org.wso2.carbon.identity.breach.source.BreachContext;
@@ -137,9 +137,9 @@ public class BreachDetectionListener extends AbstractIdentityUserOperationEventL
 
         // The engine owns the copy from here: it clears it before returning, or leaves it to the collector
         // when a source timed out and may still be reading it.
-        EvaluationResult result;
+        Decision decision;
         try {
-            result = engine.evaluate(context);
+            decision = engine.evaluate(context);
         } catch (Throwable t) {
             candidate.clear();
             // A defect in our own engine is a server fault, and must not masquerade as a policy decision.
@@ -147,7 +147,7 @@ public class BreachDetectionListener extends AbstractIdentityUserOperationEventL
             throw new UserStoreException("An internal error occurred while checking the password.");
         }
 
-        switch (result.getDecision()) {
+        switch (decision) {
             case REFUSE_BREACHED:
                 throw policyRejection(BreachDetectionConstants.ERROR_CODE_BREACHED_PASSWORD,
                         BreachDetectionConstants.MESSAGE_KEY_BREACHED,

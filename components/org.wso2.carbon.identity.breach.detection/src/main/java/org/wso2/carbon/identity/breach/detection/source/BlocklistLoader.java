@@ -40,7 +40,7 @@ import java.util.Set;
  * ordering requirement, no storage regime to pick, and nothing an entry can say that changes what the loader
  * does - a line is a password or a digest, never a directive, a path, or markup.
  */
-public class BlocklistLoader {
+class BlocklistLoader {
 
     private static final Log LOG = LogFactory.getLog(BlocklistLoader.class);
 
@@ -57,7 +57,7 @@ public class BlocklistLoader {
      * @return the snapshot.
      * @throws IOException if the file cannot be read.
      */
-    public static BlocklistSnapshot load(Path path, BlocklistFormat format, int maxEntries) throws IOException {
+    static BlocklistSnapshot load(Path path, BlocklistFormat format, int maxEntries) throws IOException {
 
         Set<String> digests = new HashSet<>();
         long skipped = 0;
@@ -94,7 +94,7 @@ public class BlocklistLoader {
         }
         LOG.info("Loaded the breach blocklist: entries=" + digests.size() + ", skipped=" + skipped
                 + ", format=" + format.toConfigValue() + ".");
-        return new BlocklistSnapshot(digests, format, skipped, truncated, System.currentTimeMillis());
+        return new BlocklistSnapshot(digests, format);
     }
 
     /**

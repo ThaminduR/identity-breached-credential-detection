@@ -51,16 +51,6 @@ public final class Credential {
         this.chars = chars;
     }
 
-    /**
-     * The raw characters. Never copy these into a {@code String}.
-     *
-     * @return the backing array, by reference.
-     */
-    public char[] getChars() {
-
-        assertUsable();
-        return chars;
-    }
 
     /**
      * @return the number of characters, safe to log.
@@ -74,11 +64,10 @@ public final class Credential {
      * The canonical byte form: Unicode NFC, encoded UTF-8. No case folding and no trimming - passwords are
      * case- and whitespace-significant, and folding them would refuse credentials nobody listed.
      * <p>
-     * The caller owns the returned array and should wipe it once done.
-     *
-     * @return canonical UTF-8 bytes.
+     * Deliberately not exposed. It hands out the credential in a readable form, and the one thing anybody needs
+     * it for - a digest - is {@link #digestHex(String)}.
      */
-    public byte[] canonicalBytes() {
+    private byte[] canonicalBytes() {
 
         assertUsable();
         CharBuffer canonical = canonicalChars();

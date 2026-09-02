@@ -52,9 +52,9 @@ public class BlocklistLoaderTest {
                 sha("SHA-1", "Qwerty@123") + ":922923"));
         BlocklistSnapshot snapshot = BlocklistLoader.load(file, BlocklistFormat.SHA1, 1000);
 
-        assertEquals(snapshot.getEntries(), 2);
-        assertEquals(snapshot.getSkipped(), 0, "Comments and blank lines are not entries and are not skipped.");
         assertTrue(snapshot.contains(digestOf("Password@1", "SHA-1")));
+        assertFalse(snapshot.contains(digestOf("# a comment", "SHA-1")),
+                "A comment is not an entry.");
         assertTrue(snapshot.contains(digestOf("Qwerty@123", "SHA-1")),
                 "The optional occurrence-count suffix must be ignored.");
         assertFalse(snapshot.contains(digestOf("Zx9q!Kt7#Lm2vRb4", "SHA-1")));
@@ -74,10 +74,10 @@ public class BlocklistLoaderTest {
         Path file = write("plain", Arrays.asList("Password@1", "correct horse battery staple"));
         BlocklistSnapshot snapshot = BlocklistLoader.load(file, BlocklistFormat.PLAINTEXT, 1000);
 
-        assertEquals(snapshot.getEntries(), 2);
         // The candidate is hashed by the credential; the entry was hashed at load. They must agree exactly.
         assertTrue(snapshot.contains(
                 new Credential("correct horse battery staple".toCharArray()).digestHex("SHA-256")));
+        assertTrue(snapshot.contains(new Credential("Password@1".toCharArray()).digestHex("SHA-256")));
     }
 
     /**
@@ -97,7 +97,7 @@ public class BlocklistLoaderTest {
     }
 
     @Test
-    public void malformedEntriesAreIgnoredCountedAndTheRestAreHonoured() throws IOException {
+    public void aMalformedEntryIsDroppedWithoutTakingTheRestOfTheFileWithIt() throws IOException {
 
         Path file = write("mixed", Arrays.asList(
                 sha("SHA-1", "Password@1"),
@@ -107,9 +107,11 @@ public class BlocklistLoaderTest {
                 sha("SHA-1", "Qwerty@123")));
         BlocklistSnapshot snapshot = BlocklistLoader.load(file, BlocklistFormat.SHA1, 1000);
 
-        assertEquals(snapshot.getEntries(), 2);
-        assertEquals(snapshot.getSkipped(), 3);
+        // The two well-formed entries either side of the malformed ones still load.
+        assertTrue(snapshot.contains(digestOf("Password@1", "SHA-1")));
         assertTrue(snapshot.contains(digestOf("Qwerty@123", "SHA-1")));
+        assertFalse(snapshot.contains("NOTAHASH"));
+        assertFalse(snapshot.contains("ZZZZ61E4C9B93F3F0682250B6CF8331B7EE68FD8"));
     }
 
     @Test
@@ -126,16 +128,17 @@ public class BlocklistLoaderTest {
     }
 
     @Test
-    public void aFileBeyondTheHeapCeilingIsReportedAsTruncatedRatherThanSilentlyShortened() throws IOException {
+    public void aFileBeyondTheCeilingStopsThereRatherThanSpillingPastIt() throws IOException {
 
         List<String> lines = new ArrayList<>();
         for (int i = 0; i < 50; i++) {
             lines.add(sha("SHA-1", "password" + i));
         }
-        BlocklistSnapshot snapshot =
-                BlocklistLoader.load(write("big", lines), BlocklistFormat.SHA1, 10);
-        assertTrue(snapshot.isTruncated());
-        assertEquals(snapshot.getEntries(), 10);
+        BlocklistSnapshot snapshot = BlocklistLoader.load(write("big", lines), BlocklistFormat.SHA1, 10);
+
+        assertTrue(snapshot.contains(digestOf("password0", "SHA-1")), "the first entry is loaded");
+        assertFalse(snapshot.contains(digestOf("password49", "SHA-1")),
+                "everything past the ceiling is not enforced, which is why the loader logs at ERROR");
     }
 
 

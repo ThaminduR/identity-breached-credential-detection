@@ -30,17 +30,19 @@ import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
 import org.wso2.carbon.identity.breach.detection.config.BreachDetectionConfig;
+import org.wso2.carbon.identity.breach.detection.config.ResolvedSourceConfiguration;
 import org.wso2.carbon.identity.breach.detection.engine.BreachEvaluationEngine;
 import org.wso2.carbon.identity.breach.detection.engine.SourceRegistry;
 import org.wso2.carbon.identity.breach.detection.listener.BreachDetectionListener;
 import org.wso2.carbon.identity.breach.detection.source.LocalBlocklistSource;
 import org.wso2.carbon.identity.breach.source.BreachSource;
+import org.wso2.carbon.identity.breach.detection.util.BreachDetectionUtils;
 import org.wso2.carbon.identity.core.util.IdentityCoreInitializedEvent;
 import org.wso2.carbon.user.core.listener.UserOperationEventListener;
-import org.wso2.carbon.user.core.service.RealmService;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Starts the capability and publishes its services.
@@ -74,14 +76,17 @@ public class BreachDetectionServiceComponent {
 
         LocalBlocklistSource localBlocklistSource = new LocalBlocklistSource();
         holder.setLocalBlocklistSource(localBlocklistSource);
-        SourceConfigurator.configure(localBlocklistSource);
 
-        // The in-tree offline list registers exactly like a connector. The engine has no special path for it.
+        // The in-tree offline list registers exactly like a connector, which is also what configures it: the
+        // bind callback below fires for it too. The engine has no special path for it.
         registrations.add(bundleContext.registerService(BreachSource.class, localBlocklistSource, null));
         registrations.add(bundleContext.registerService(UserOperationEventListener.class,
                 new BreachDetectionListener(), null));
 
-        SourceConfigurator.configureAll(registry);
+        // Re-applied after the reload above, since a source may have bound before this component activated.
+        for (BreachSource source : registry.installed()) {
+            configure(source);
+        }
 
         LOG.info("Breached password detection started. Deployment switch: "
                 + (config.isEnabledAtDeployment() ? "on" : "off")
@@ -89,10 +94,37 @@ public class BreachDetectionServiceComponent {
                 + ", per-source timeout: " + config.getEvaluationTimeoutMs() + " ms"
                 + ", bound sources: " + registry.describe() + ".");
 
-        List<String> orphaned = SourceConfigurator.orphanedNamespaces(registry);
+        List<String> orphaned = new ArrayList<>();
+        for (Map.Entry<String, Map<String, String>> entry : config.getSourceProperties().entrySet()) {
+            if (!registry.get(entry.getKey()).isPresent()) {
+                orphaned.add(entry.getKey());
+            }
+        }
         if (!orphaned.isEmpty()) {
+            // Reported rather than ignored: it usually means a connector JAR is missing, which is a deployment
+            // action rather than a configuration one.
             LOG.warn("Breach detection configuration names sources that are not installed: " + orphaned
                     + ". Add the connector JARs to repository/components/dropins, or remove the configuration.");
+        }
+    }
+
+    /**
+     * Hand a source the settings it declared, resolved from operator configuration.
+     * <p>
+     * The only place a source's configuration is assembled. A connector reads nothing itself and receives no
+     * filesystem or vault access of its own, which is what makes the {@code secret} flag on a property
+     * descriptor enforceable. Contained: a connector that cannot be configured must not stop the others
+     * starting.
+     */
+    private static void configure(BreachSource source) {
+
+        try {
+            Map<String, String> configured = BreachDetectionConfig.getInstance()
+                    .getSourceProperties(BreachDetectionUtils.normalizeSourceId(source.getId()));
+            source.configure(new ResolvedSourceConfiguration(source.getId(), source.getProperties(), configured));
+        } catch (Throwable t) {
+            LOG.error("Failed to configure breach source '" + source.getId()
+                    + "'. It will report itself as not configured.", t);
         }
     }
 
@@ -128,7 +160,7 @@ public class BreachDetectionServiceComponent {
     protected void setBreachSource(BreachSource source) {
 
         BreachDetectionDataHolder.getInstance().getSourceRegistry().bind(source);
-        SourceConfigurator.configure(source);
+        configure(source);
     }
 
     protected void unsetBreachSource(BreachSource source) {
@@ -136,22 +168,6 @@ public class BreachDetectionServiceComponent {
         BreachDetectionDataHolder.getInstance().getSourceRegistry().unbind(source);
     }
 
-    @Reference(
-            name = "user.realm.service",
-            service = RealmService.class,
-            cardinality = ReferenceCardinality.MANDATORY,
-            policy = ReferencePolicy.DYNAMIC,
-            unbind = "unsetRealmService"
-    )
-    protected void setRealmService(RealmService realmService) {
-
-        BreachDetectionDataHolder.getInstance().setRealmService(realmService);
-    }
-
-    protected void unsetRealmService(RealmService realmService) {
-
-        BreachDetectionDataHolder.getInstance().setRealmService(null);
-    }
 
     /**
      * Held so that identity.xml has been parsed before this component reads it.

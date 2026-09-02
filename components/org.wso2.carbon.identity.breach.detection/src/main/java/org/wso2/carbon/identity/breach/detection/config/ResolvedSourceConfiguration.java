@@ -52,7 +52,7 @@ public class ResolvedSourceConfiguration implements SourceConfiguration {
     private final Map<String, PropertyDescriptor> declared;
 
     public ResolvedSourceConfiguration(String sourceId, List<PropertyDescriptor> descriptors,
-                                       SourceNamespace namespace) {
+                                       Map<String, String> configured) {
 
         this.sourceId = sourceId;
         this.declared = new LinkedHashMap<>();
@@ -60,9 +60,9 @@ public class ResolvedSourceConfiguration implements SourceConfiguration {
             declared.put(descriptor.getName(), descriptor);
         }
         this.values = new HashMap<>();
-        if (namespace != null) {
-            values.putAll(namespace.getProperties());
-            reportUnrecognisedKeys(namespace);
+        if (configured != null) {
+            values.putAll(configured);
+            reportUnrecognisedKeys();
         }
         reportMissingRequired();
     }
@@ -185,13 +185,13 @@ public class ResolvedSourceConfiguration implements SourceConfiguration {
         return expanded.replace('/', File.separatorChar);
     }
 
-    private void reportUnrecognisedKeys(SourceNamespace namespace) {
+    private void reportUnrecognisedKeys() {
 
-        for (String key : namespace.getProperties().keySet()) {
+        for (String key : values.keySet()) {
             if (!declared.containsKey(key)) {
                 // Reported rather than ignored: a typo must not silently leave a connector on its default.
                 LOG.warn("Breach detection source '" + sourceId + "' has no setting named '" + key
-                        + "'. Check the [breach_detection.sources." + namespace.getId() + "] configuration.");
+                        + "'. Check the [breach_detection.sources." + sourceId + "] configuration.");
             }
         }
     }

@@ -77,17 +77,17 @@ public class BreachEvaluationEngine {
      * Clears the credential before returning, unless a source timed out and may still be reading it. The
      * caller does not need to clear it again.
      *
-     * @param context the candidate and its surrounding operation.
-     * @return the decision, the reported status, and every contributing verdict.
+     * @param context the candidate and the organization it is being set in.
+     * @return what the caller should do.
      */
-    public EvaluationResult evaluate(BreachContext context) {
+    public Decision evaluate(BreachContext context) {
 
         List<BreachSource> plan = plan(context.getTenantDomain());
         if (plan.isEmpty()) {
             // No source wants to be consulted here, so nothing is being checked. That is a legitimate
             // state - it is what an organization that has not switched anything on looks like.
             context.getCredential().clear();
-            return EvaluationResult.accept(EnforcementStatus.OFF);
+            return Decision.ACCEPT;
         }
 
         // Set when a call times out: the worker may still be reading the characters, so they are left to the
@@ -211,8 +211,7 @@ public class BreachEvaluationEngine {
      * Resolve the verdicts into one decision. {@code verdicts.get(i)} is the verdict of {@code plan.get(i)},
      * so the source that produced a verdict is the one asked for its failure action.
      */
-    private EvaluationResult resolve(String tenantDomain, List<BreachSource> plan,
-                                     List<BreachVerdict> verdicts) {
+    private Decision resolve(String tenantDomain, List<BreachSource> plan, List<BreachVerdict> verdicts) {
 
         int answered = 0;
         String denyingSource = null;
@@ -220,8 +219,7 @@ public class BreachEvaluationEngine {
             BreachVerdict verdict = verdicts.get(i);
             switch (verdict.getOutcome()) {
                 case FOUND:
-                    return EvaluationResult.of(Decision.REFUSE_BREACHED, EnforcementStatus.ENFORCING, verdicts,
-                            verdict.getSourceId());
+                    return Decision.REFUSE_BREACHED;
                 case NOT_FOUND:
                     answered++;
                     break;
@@ -234,27 +232,16 @@ public class BreachEvaluationEngine {
         }
 
         int unavailable = verdicts.size() - answered;
-        EnforcementStatus status = enforcementStatus(answered, unavailable);
-        if (status == EnforcementStatus.NOT_ENFORCING) {
+        if (unavailable > 0 && answered == 0) {
             // The signal that matters most: everything looks healthy from outside while nothing is checked.
             LOG.error("Breached password detection is not enforcing for tenant '" + tenantDomain
                     + "': no enabled source could return a verdict. Verdicts: " + verdicts);
-        } else if (status == EnforcementStatus.DEGRADED && LOG.isWarnEnabled()) {
+        } else if (unavailable > 0 && LOG.isWarnEnabled()) {
             LOG.warn("Breached password detection is degraded for tenant '" + tenantDomain + "': " + unavailable
                     + " of " + verdicts.size() + " sources could not answer.");
         }
 
-        return denyingSource == null
-                ? EvaluationResult.of(Decision.ACCEPT, status, verdicts, null)
-                : EvaluationResult.of(Decision.REFUSE_UNVERIFIED, status, verdicts, denyingSource);
-    }
-
-    private static EnforcementStatus enforcementStatus(int answered, int unavailable) {
-
-        if (unavailable == 0) {
-            return EnforcementStatus.ENFORCING;
-        }
-        return answered > 0 ? EnforcementStatus.DEGRADED : EnforcementStatus.NOT_ENFORCING;
+        return denyingSource == null ? Decision.ACCEPT : Decision.REFUSE_UNVERIFIED;
     }
 
     private FailureAction failureActionOf(BreachSource source, String tenantDomain) {

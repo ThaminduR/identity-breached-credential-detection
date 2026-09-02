@@ -21,67 +21,31 @@ package org.wso2.carbon.identity.breach.detection.source;
 import java.util.Set;
 
 /**
- * One consistent view of the operator's file: the digests it yielded, and what happened while reading it.
+ * One consistent view of the operator's file: the digests it yielded, paired with the algorithm they were taken
+ * with.
  * <p>
- * A reload builds a whole new snapshot before swapping the reference, so an evaluation in flight always sees one
- * consistent view and a half-written file can never produce partial matching.
+ * The two travel together because a lookup needs both, and a reload builds a whole new snapshot before swapping
+ * the reference - so an evaluation in flight can never hash a candidate with one algorithm and compare it
+ * against digests taken with another.
  */
-public final class BlocklistSnapshot {
+final class BlocklistSnapshot {
 
     private final Set<String> digests;
     private final BlocklistFormat format;
-    private final long skipped;
-    private final boolean truncated;
-    private final long loadedAtEpochMillis;
 
-    BlocklistSnapshot(Set<String> digests, BlocklistFormat format, long skipped, boolean truncated,
-                      long loadedAtEpochMillis) {
+    BlocklistSnapshot(Set<String> digests, BlocklistFormat format) {
 
         this.digests = digests;
         this.format = format;
-        this.skipped = skipped;
-        this.truncated = truncated;
-        this.loadedAtEpochMillis = loadedAtEpochMillis;
     }
 
-    /**
-     * @param uppercaseHexDigest the candidate's digest, taken with {@link BlocklistFormat#getDigestAlgorithm()}.
-     * @return whether the digest is listed.
-     */
-    public boolean contains(String uppercaseHexDigest) {
+    boolean contains(String uppercaseHexDigest) {
 
         return digests.contains(uppercaseHexDigest);
     }
 
-    public BlocklistFormat getFormat() {
+    BlocklistFormat getFormat() {
 
         return format;
-    }
-
-    public long getEntries() {
-
-        return digests.size();
-    }
-
-    /**
-     * @return how many entries were malformed or unrecognised. Reported on every load: an operator has to be
-     * able to tell the difference between a file that loaded and a file that mostly did not.
-     */
-    public long getSkipped() {
-
-        return skipped;
-    }
-
-    /**
-     * @return whether the file exceeded the maximum entry count and was cut short.
-     */
-    public boolean isTruncated() {
-
-        return truncated;
-    }
-
-    public long getLoadedAtEpochMillis() {
-
-        return loadedAtEpochMillis;
     }
 }

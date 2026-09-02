@@ -104,15 +104,18 @@ public class CredentialTest {
         }
     }
 
+    /**
+     * Digesting wipes the intermediate byte form it built. If that aliased the backing characters, the second
+     * call would hash a zeroed credential - so asking twice is what proves it does not.
+     */
     @Test
-    public void canonicalBytesDoNotAliasTheBackingArray() {
+    public void digestingDoesNotConsumeTheCredential() {
 
-        char[] chars = "Password@1".toCharArray();
-        Credential credential = new Credential(chars);
-        byte[] first = credential.canonicalBytes();
-        java.util.Arrays.fill(first, (byte) 0);
-        // Wiping what the caller was handed must not damage the credential itself.
+        Credential credential = new Credential("Password@1".toCharArray());
+
         assertEquals(credential.digestHex("SHA-1"), sha("SHA-1", "Password@1"));
+        assertEquals(credential.digestHex("SHA-1"), sha("SHA-1", "Password@1"));
+        assertEquals(credential.digestHex("SHA-256"), sha("SHA-256", "Password@1"));
     }
 
     @Test
