@@ -28,6 +28,8 @@ import org.wso2.carbon.identity.breach.detection.util.BreachDetectionUtils;
 import org.wso2.carbon.identity.core.model.IdentityEventListenerConfig;
 import org.wso2.carbon.identity.core.util.IdentityConfigParser;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.securevault.SecretResolver;
+import org.wso2.securevault.SecretResolverFactory;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -172,7 +174,7 @@ public class BreachDetectionConfig {
             return;
         }
 
-        SecretResolutionSupport secrets = createSecretSupport(root);
+        SecretResolver resolver = secretResolver(root);
 
         for (OMElement element : children(root)) {
             String localName = element.getLocalName();
@@ -184,7 +186,7 @@ public class BreachDetectionConfig {
             } else if (BreachDetectionConstants.CONFIG_SOURCES_ELEMENT.equals(localName)) {
                 for (OMElement source : children(element)) {
                     if (BreachDetectionConstants.CONFIG_SOURCE_ELEMENT.equals(source.getLocalName())) {
-                        parseSource(source, sources, secrets);
+                        parseSource(source, sources, resolver);
                     }
                 }
             }
@@ -192,7 +194,7 @@ public class BreachDetectionConfig {
     }
 
     private void parseSource(OMElement sourceElement, Map<String, Map<String, String>> sources,
-                             SecretResolutionSupport secrets) {
+                             SecretResolver resolver) {
 
         String id = attribute(sourceElement, BreachDetectionConstants.CONFIG_ATTRIBUTE_ID);
         if (id == null || id.trim().isEmpty()) {
@@ -215,7 +217,7 @@ public class BreachDetectionConfig {
                 alias = secretAliasFromValue(value);
             }
             // A secret that could not be resolved stays absent rather than being stored as its own alias.
-            properties.put(name, alias == null ? value : (secrets == null ? null : secrets.resolve(alias)));
+            properties.put(name, alias == null ? value : resolveSecret(resolver, alias));
         }
         sources.put(BreachDetectionUtils.normalizeSourceId(id), properties);
     }
@@ -235,7 +237,11 @@ public class BreachDetectionConfig {
         return elements;
     }
 
-    private SecretResolutionSupport createSecretSupport(OMElement element) {
+    /**
+     * A resolver over the document root, or null when the secure vault is unavailable. Absent a resolver,
+     * secret values read literally rather than failing the whole configuration layer.
+     */
+    private static SecretResolver secretResolver(OMElement element) {
 
         try {
             OMContainer parent = element.getParent();
@@ -244,9 +250,25 @@ public class BreachDetectionConfig {
                 documentRoot = (OMElement) parent;
                 parent = documentRoot.getParent();
             }
-            return new SecretResolutionSupport(documentRoot);
+            return SecretResolverFactory.create(documentRoot, false);
         } catch (Throwable t) {
             LOG.debug("Secure vault support is unavailable for breach detection configuration.", t);
+            return null;
+        }
+    }
+
+    /**
+     * @return the resolved value, or null. A vault failure never surfaces the alias or the value.
+     */
+    private static String resolveSecret(SecretResolver resolver, String alias) {
+
+        if (resolver == null || !resolver.isInitialized()) {
+            return null;
+        }
+        try {
+            return resolver.isTokenProtected(alias) ? resolver.resolve(alias) : null;
+        } catch (Throwable t) {
+            LOG.error("Failed to resolve a secure vault alias for a breach detection source property.");
             return null;
         }
     }
