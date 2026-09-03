@@ -48,7 +48,6 @@ public class BreachDetectionDataHolder {
         return sourceRegistry;
     }
 
-
     public BreachEvaluationEngine getEvaluationEngine() {
 
         return evaluationEngine;

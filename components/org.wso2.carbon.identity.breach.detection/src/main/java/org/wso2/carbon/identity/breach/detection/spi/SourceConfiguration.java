@@ -42,7 +42,6 @@ public interface SourceConfiguration {
      */
     int getInt(String name, int defaultValue);
 
-
     /**
      * @param name         property name.
      * @param defaultValue value to use when unset.

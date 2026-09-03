@@ -54,7 +54,6 @@ public class LocalBlocklistSource implements BreachSource {
      */
     private static final int DEFAULT_MAX_HEAP_ENTRIES = 5_000_000;
 
-
     private final AtomicReference<BlocklistSnapshot> snapshot = new AtomicReference<>();
 
     private volatile boolean enabled = true;
@@ -67,7 +66,6 @@ public class LocalBlocklistSource implements BreachSource {
 
         return BreachDetectionConstants.LOCAL_LIST_SOURCE_ID;
     }
-
 
     @Override
     public int getPriority() {
@@ -124,8 +122,6 @@ public class LocalBlocklistSource implements BreachSource {
         return enabled && path != null && snapshot.get() != null;
     }
 
-
-
     /**
      * A list that is not loaded accepts rather than refuses. {@link #isEnabled} already reports false in
      * that case, so the engine does not reach this method. See the open question recorded against that
@@ -168,6 +164,5 @@ public class LocalBlocklistSource implements BreachSource {
 
         snapshot.set(null);
     }
-
 
 }

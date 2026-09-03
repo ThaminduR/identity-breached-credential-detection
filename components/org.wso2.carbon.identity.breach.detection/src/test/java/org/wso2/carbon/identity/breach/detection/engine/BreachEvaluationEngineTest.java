@@ -117,7 +117,6 @@ public class BreachEvaluationEngineTest {
         assertEquals(result, Decision.REFUSE_BREACHED);
     }
 
-
     @Test
     public void theCheapSourceRunsFirstAndAMatchStopsTheRest() {
 
@@ -162,7 +161,6 @@ public class BreachEvaluationEngineTest {
         assertEquals(result, Decision.ACCEPT);
     }
 
-
     @Test
     public void theCredentialIsClearedOnceEverySourceHasAnswered() {
 
@@ -173,7 +171,6 @@ public class BreachEvaluationEngineTest {
 
         assertTrue(candidate.isCleared());
     }
-
 
     private Credential candidate() {
 

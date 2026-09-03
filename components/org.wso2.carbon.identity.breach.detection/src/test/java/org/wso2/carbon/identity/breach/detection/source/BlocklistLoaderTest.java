@@ -138,9 +138,8 @@ public class BlocklistLoaderTest {
 
         assertTrue(snapshot.contains(digestOf("password0", "SHA-1")), "the first entry is loaded");
         assertFalse(snapshot.contains(digestOf("password49", "SHA-1")),
-                "everything past the ceiling is not enforced, which is why the loader logs at ERROR");
+                "entries past the ceiling are not enforced, and the loader logs that at ERROR");
     }
-
 
     @Test
     public void aLowercaseSortedCorpusStillMatches() throws IOException {
@@ -154,10 +153,6 @@ public class BlocklistLoaderTest {
                 BlocklistLoader.load(write("lower", digests), BlocklistFormat.SHA1, 1000);
         assertTrue(snapshot.contains(digestOf("lower42", "SHA-1")));
     }
-
-
-
-
 
     private static String digestOf(String password, String algorithm) {
 

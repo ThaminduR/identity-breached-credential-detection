@@ -26,7 +26,6 @@ import org.wso2.carbon.identity.breach.detection.spi.BreachSource;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
@@ -69,15 +68,6 @@ public class SourceRegistry {
     }
 
     /**
-     * @param sourceId an id as written in policy or configuration.
-     * @return the bound source, or empty when policy names something that is not installed.
-     */
-    public Optional<BreachSource> get(String sourceId) {
-
-        return Optional.ofNullable(sources.get(BreachDetectionUtils.normalizeSourceId(sourceId)));
-    }
-
-    /**
      * @return every bound source, ordered by ascending priority. A source declares its own priority, so an
      * in-process source can be called first without the engine knowing which source it is.
      */
@@ -92,7 +82,7 @@ public class SourceRegistry {
     /**
      * @return a compact operator-facing description of the bound set.
      */
-    public String describe() {
+    private String describe() {
 
         return installed().stream()
                 .map(source -> source.getId() + '@' + source.getPriority())

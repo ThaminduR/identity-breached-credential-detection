@@ -69,7 +69,6 @@ public class ResolvedSourceConfiguration implements SourceConfiguration {
         return BreachDetectionUtils.parseInt(getString(name).orElse(null), defaultValue);
     }
 
-
     @Override
     public boolean getBoolean(String name, boolean defaultValue) {
 

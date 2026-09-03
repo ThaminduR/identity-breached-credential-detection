@@ -96,7 +96,8 @@ public class BreachDetectionConfig {
     }
 
     /**
-     * Re-read identity.xml. Used by the management service after an operator edits configuration.
+     * Re-read identity.xml. Called once when the component activates, so that the configuration is parsed
+     * after the identity core has initialised.
      *
      * @return the reloaded configuration.
      */
@@ -122,15 +123,6 @@ public class BreachDetectionConfig {
     public int getListenerOrder() {
 
         return listenerOrder;
-    }
-
-    /**
-     * @return the configured settings for every source namespace, keyed by normalized source id, with any
-     * {@code $secret{alias}} reference already resolved.
-     */
-    public Map<String, Map<String, String>> getSourceProperties() {
-
-        return sourceProperties;
     }
 
     /**

@@ -51,15 +51,6 @@ public final class Credential {
         this.chars = chars;
     }
 
-
-    /**
-     * @return the number of characters. Safe to log.
-     */
-    public int length() {
-
-        return chars.length;
-    }
-
     /**
      * Returns the canonical bytes of the password: Unicode NFC, UTF-8, with no case folding and no
      * trimming, because a password is case- and whitespace-significant. Private, because

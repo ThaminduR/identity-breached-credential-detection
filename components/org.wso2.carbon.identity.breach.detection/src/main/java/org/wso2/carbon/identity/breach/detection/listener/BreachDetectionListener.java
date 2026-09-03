@@ -158,8 +158,7 @@ public class BreachDetectionListener extends AbstractIdentityUserOperationEventL
     }
 
     /**
-     * A bulk import or migration-time write, which an operator can exempt so a migration does not pay a
-     * network round trip per row or burn third-party quota on data that is already in the store.
+     * Whether this write is a bulk operation that the operator chose to exempt.
      */
     private boolean isExemptBulkWrite(Flow flow) {
 
@@ -167,18 +166,16 @@ public class BreachDetectionListener extends AbstractIdentityUserOperationEventL
                 && BreachDetectionConfig.getInstance().isBulkExempt();
     }
 
-
     private Flow currentFlow() {
 
         try {
             IdentityContext context = IdentityContext.getThreadLocalIdentityContext();
             return context == null ? null : context.getFlow();
         } catch (Throwable t) {
-            LOG.debug("No identity context is available; falling back to the listener hook for the operation.");
+            LOG.debug("No identity context is available, so the write is not treated as a bulk operation.");
             return null;
         }
     }
-
 
     private String resolveTenantDomain(UserStoreManager userStoreManager) {
 
@@ -193,7 +190,6 @@ public class BreachDetectionListener extends AbstractIdentityUserOperationEventL
         }
         return MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
     }
-
 
     /**
      * The credential arrives as a {@link Secret} for listeners that handle secrets and as a character sequence

@@ -97,24 +97,17 @@ class BlocklistLoader {
     }
 
     /**
-     * Blank lines and comments are not entries and are not counted as skipped. Only the line ending is
-     * stripped, because a password is whitespace-significant.
+     * Blank lines and comments are not entries and are not counted as skipped. Nothing is trimmed, because a
+     * password is whitespace-significant, and {@code readLine} has already removed the line ending.
      */
     private static String strip(String line) {
 
-        String content = line;
-        if (content.endsWith("\r")) {
-            content = content.substring(0, content.length() - 1);
-        }
-        if (content.isEmpty() || content.startsWith("#")) {
-            return null;
-        }
-        return content;
+        return line.isEmpty() || line.startsWith("#") ? null : line;
     }
 
     /**
      * A hashed entry is read as it stands, because its algorithm was fixed when the list was produced. A
-     * plaintext entry is hashed here, so that no readable password is retained in memory.
+     * plaintext entry is hashed here, so that only the digest is held for the life of the list.
      */
     private static String toDigest(String content, BlocklistFormat format) {
 

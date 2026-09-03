@@ -118,12 +118,6 @@ public class CredentialTest {
         assertEquals(credential.digestHex("SHA-256"), sha("SHA-256", "Password@1"));
     }
 
-    @Test
-    public void lengthIsSafeToExpose() {
-
-        assertEquals(new Credential("Password@1".toCharArray()).length(), 10);
-    }
-
     private static String sha(String algorithm, String value) {
 
         try {

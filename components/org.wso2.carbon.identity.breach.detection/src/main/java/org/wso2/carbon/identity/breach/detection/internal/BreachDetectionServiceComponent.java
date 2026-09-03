@@ -60,6 +60,14 @@ public class BreachDetectionServiceComponent {
 
     private final List<ServiceRegistration<?>> registrations = new ArrayList<>();
 
+    /**
+     * SCR binds every published source before this component activates, but the configuration is only read
+     * during activation. A source bound before that point is configured by the loop in
+     * {@link #activate(ComponentContext)}; one bound after it is configured by its own bind callback. This
+     * flag keeps a source from being configured twice.
+     */
+    private static volatile boolean active;
+
     @Activate
     protected void activate(ComponentContext context) {
 
@@ -80,27 +88,14 @@ public class BreachDetectionServiceComponent {
         registrations.add(bundleContext.registerService(UserOperationEventListener.class,
                 new BreachDetectionListener(), null));
 
-        // Re-applied after the reload above, because a source may have bound before this component activated.
         for (BreachSource source : registry.installed()) {
             configure(source);
         }
+        active = true;
 
         LOG.info("Breached password detection started. Deployment switch: "
                 + (config.isEnabledAtDeployment() ? "on" : "off")
-                + ", listener order: " + config.getListenerOrder()
-                + ", bound sources: " + registry.describe() + ".");
-
-        List<String> orphaned = new ArrayList<>();
-        for (Map.Entry<String, Map<String, String>> entry : config.getSourceProperties().entrySet()) {
-            if (!registry.get(entry.getKey()).isPresent()) {
-                orphaned.add(entry.getKey());
-            }
-        }
-        if (!orphaned.isEmpty()) {
-            // Usually a missing connector JAR, which is a deployment step rather than a config change.
-            LOG.warn("Breach detection configuration names sources that are not installed: " + orphaned
-                    + ". Add the connector JARs to repository/components/dropins, or remove the configuration.");
-        }
+                + ", listener order: " + config.getListenerOrder() + ".");
     }
 
     /**
@@ -115,7 +110,7 @@ public class BreachDetectionServiceComponent {
             source.configure(new ResolvedSourceConfiguration(source.getId(), configured));
         } catch (Throwable t) {
             LOG.error("Failed to configure breach source '" + source.getId()
-                    + "'. It will report itself as not configured.", t);
+                    + "'. It keeps whatever configuration it already had.", t);
         }
     }
 
@@ -130,6 +125,7 @@ public class BreachDetectionServiceComponent {
             }
         }
         registrations.clear();
+        active = false;
 
         BreachDetectionDataHolder holder = BreachDetectionDataHolder.getInstance();
         if (holder.getLocalBlocklistSource() != null) {
@@ -148,14 +144,15 @@ public class BreachDetectionServiceComponent {
     protected void setBreachSource(BreachSource source) {
 
         BreachDetectionDataHolder.getInstance().getSourceRegistry().bind(source);
-        configure(source);
+        if (active) {
+            configure(source);
+        }
     }
 
     protected void unsetBreachSource(BreachSource source) {
 
         BreachDetectionDataHolder.getInstance().getSourceRegistry().unbind(source);
     }
-
 
     /**
      * Referenced so that identity.xml is parsed before this component reads it.

@@ -88,7 +88,6 @@ public class BreachDetectionUtils {
         }
     }
 
-
     /**
      * @param value a configured value.
      * @param fallback value to use when unset.
