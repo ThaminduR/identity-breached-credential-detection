@@ -24,9 +24,7 @@ import org.testng.annotations.Test;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Arrays;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 
 import static org.testng.Assert.assertEquals;
@@ -37,9 +35,6 @@ import static org.testng.Assert.assertTrue;
  * Resolving a source's settings, including the rule that a configured path cannot escape the deployment.
  */
 public class ResolvedSourceConfigurationTest {
-
-    private static final List<String> NAMES =
-            Arrays.asList("path", "format", "read_timeout_ms", "api_key", "verbose");
 
     private Path carbonHome;
 
@@ -87,7 +82,7 @@ public class ResolvedSourceConfigurationTest {
     }
 
     @Test
-    public void anUndeclaredKeyIsReportedButStillResolves() {
+    public void anyConfiguredKeyResolves() {
 
         Map<String, String> values = new LinkedHashMap<>();
         values.put("frmat", "sha1");
@@ -121,6 +116,6 @@ public class ResolvedSourceConfigurationTest {
 
     private ResolvedSourceConfiguration resolve(Map<String, String> values) {
 
-        return new ResolvedSourceConfiguration("test", NAMES, values);
+        return new ResolvedSourceConfiguration("test", values);
     }
 }

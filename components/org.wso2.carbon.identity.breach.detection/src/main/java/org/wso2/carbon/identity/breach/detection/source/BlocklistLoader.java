@@ -35,8 +35,9 @@ import java.util.Set;
 /**
  * Builds a {@link BlocklistSnapshot} from the operator's file.
  * <p>
- * Hashed entries are read as digests, plaintext entries are hashed on the way in, and both produce one set of
- * digests. A line is treated as data: it is a password or a digest, never a directive or a path.
+ * Hashed entries are read as digests and plaintext entries are hashed on the way in, so both produce one set
+ * of digests. Every line is treated as data. A line is a password or a digest, and is never interpreted as a
+ * directive or a path.
  */
 class BlocklistLoader {
 
@@ -50,7 +51,7 @@ class BlocklistLoader {
      * Read the file and index it.
      *
      * @param path       the file, already confined to a permitted location by the configuration layer.
-     * @param format     how the file is written, as the operator declared it.
+     * @param format     how the file is written, as the operator configured it.
      * @param maxEntries the ceiling, beyond which loading stops and reports truncation.
      * @return the snapshot.
      * @throws IOException if the file cannot be read.
@@ -97,7 +98,7 @@ class BlocklistLoader {
 
     /**
      * Blank lines and comments are not entries and are not counted as skipped. Only the line ending is
-     * stripped: passwords are whitespace-significant, so nothing else is trimmed.
+     * stripped, because a password is whitespace-significant.
      */
     private static String strip(String line) {
 
@@ -112,8 +113,8 @@ class BlocklistLoader {
     }
 
     /**
-     * A hashed entry is read as it stands, because its algorithm was fixed when the list was dumped. A
-     * plaintext entry is hashed here, so no readable password reaches the heap.
+     * A hashed entry is read as it stands, because its algorithm was fixed when the list was produced. A
+     * plaintext entry is hashed here, so that no readable password is retained in memory.
      */
     private static String toDigest(String content, BlocklistFormat format) {
 
@@ -142,8 +143,8 @@ class BlocklistLoader {
     }
 
     /**
-     * Hashes a file entry through the same code as a candidate password, so load and lookup cannot normalize
-     * differently.
+     * Hashes a file entry with the same code that hashes a candidate password, so that loading and lookup
+     * cannot normalize differently.
      */
     static String digestOf(String value, String algorithm) {
 

@@ -27,10 +27,11 @@ import java.text.Normalizer;
 import java.util.Arrays;
 
 /**
- * The candidate password, held as a {@code char[]} so it can be cleared and never reaches the string pool.
+ * The candidate password, held as a {@code char[]} so that it can be cleared and does not enter the string
+ * pool.
  * <p>
- * Must never enter a log statement, an exception message or a cache key. The engine clears it once the last
- * source returns. A source must not retain it.
+ * Do not pass this value to a log statement, an exception message or a cache key. The engine clears it after
+ * the last source returns. A source must not retain it.
  */
 public final class Credential {
 
@@ -52,7 +53,7 @@ public final class Credential {
 
 
     /**
-     * @return the number of characters, safe to log.
+     * @return the number of characters. Safe to log.
      */
     public int length() {
 
@@ -60,8 +61,9 @@ public final class Credential {
     }
 
     /**
-     * Canonical bytes: Unicode NFC, UTF-8, no case folding and no trimming. Passwords are case- and
-     * whitespace-significant. Private, because the only use for it is {@link #digestHex(String)}.
+     * Returns the canonical bytes of the password: Unicode NFC, UTF-8, with no case folding and no
+     * trimming, because a password is case- and whitespace-significant. Private, because
+     * {@link #digestHex(String)} is the only caller.
      */
     private byte[] canonicalBytes() {
 
@@ -80,7 +82,7 @@ public final class Credential {
     }
 
     /**
-     * Digest of the canonical bytes, uppercase hex. What a source matches on.
+     * Returns the digest of the canonical bytes as uppercase hex. A source matches on this value.
      *
      * @param algorithm a {@link MessageDigest} algorithm name, for example {@code SHA-1}.
      * @return uppercase hex digest.
@@ -107,7 +109,7 @@ public final class Credential {
     }
 
     /**
-     * Zero the backing array. Called by the engine once every source has returned.
+     * Zeroes the backing array. The engine calls this after every source has returned.
      */
     public void clear() {
 

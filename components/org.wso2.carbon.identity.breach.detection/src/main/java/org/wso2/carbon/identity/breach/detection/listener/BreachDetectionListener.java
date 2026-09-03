@@ -43,12 +43,11 @@ import java.util.Arrays;
 import java.util.Map;
 
 /**
- * The single interception point.
+ * Intercepts every password write.
  * <p>
  * Every password-setting path calls {@code AbstractUserStoreManager}, which runs an ordered listener chain
- * before writing. Intercepting there covers paths added later, including against a secondary user store.
- * <p>
- * Order 420 is after input validation at 3 and before the service extension at 10000.
+ * before the write. Intercepting there covers paths added later, and writes to a secondary user store.
+ * Order 420 places this listener after input validation at 3 and before the service extension at 10000.
  */
 public class BreachDetectionListener extends AbstractIdentityUserOperationEventListener {
 
@@ -58,7 +57,7 @@ public class BreachDetectionListener extends AbstractIdentityUserOperationEventL
     public int getExecutionOrderId() {
 
         int order = getOrderId();
-        // The sentinel getOrderId returns when identity.xml carries no declaration for this listener.
+        // The value getOrderId returns when identity.xml carries no declaration for this listener.
         return order == IdentityCoreConstants.EVENT_LISTENER_ORDER_ID
                 ? BreachDetectionConstants.DEFAULT_LISTENER_ORDER : order;
     }
@@ -68,7 +67,7 @@ public class BreachDetectionListener extends AbstractIdentityUserOperationEventL
                                 Map<String, String> claims, String profile, UserStoreManager userStoreManager)
             throws UserStoreException {
 
-        // Self-registration, administrative user creation, and invitation completion all arrive here.
+        // Self-registration, administrative user creation and invitation completion all arrive here.
         return check(credential, userStoreManager);
     }
 
@@ -115,7 +114,7 @@ public class BreachDetectionListener extends AbstractIdentityUserOperationEventL
 
         char[] chars = extract(credential);
         if (chars == null || chars.length == 0) {
-            // Nothing to check. Composition rules own empty and malformed input.
+            // Nothing to check. Composition rules handle empty and malformed input.
             return true;
         }
 
@@ -123,7 +122,7 @@ public class BreachDetectionListener extends AbstractIdentityUserOperationEventL
             return true;
         }
 
-        // A copy, so clearing it after evaluation cannot corrupt the write that follows.
+        // A copy, so that clearing it after evaluation cannot corrupt the write that follows.
         Credential candidate = new Credential(Arrays.copyOf(chars, chars.length));
 
         // The engine owns the copy from here: it clears it before returning, or leaves it to the collector

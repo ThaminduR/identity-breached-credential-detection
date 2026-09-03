@@ -28,6 +28,7 @@ import org.wso2.carbon.identity.breach.detection.util.BreachDetectionUtils;
 import org.wso2.carbon.identity.core.model.IdentityEventListenerConfig;
 import org.wso2.carbon.identity.core.util.IdentityConfigParser;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.user.core.listener.UserOperationEventListener;
 import org.wso2.securevault.SecretResolver;
 import org.wso2.securevault.SecretResolverFactory;
 
@@ -39,17 +40,23 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Operator configuration: the deployment kill switch, the evaluation bounds, and the per-source namespaces.
+ * Operator configuration: the deployment switch, the evaluation bounds, and the per-source namespaces.
  * <p>
  * Read from identity.xml, which the config parser renders from {@code [breach_detection]} in deployment.toml.
- * Deliberately separate from tenant policy: incident control must not depend on a tenant configuration store
- * being reachable, and filesystem and memory are deployment properties rather than tenant ones.
+ * This configuration is kept separate from tenant policy for two reasons. Switching the feature off must work
+ * when the tenant configuration store is unreachable, and a filesystem path or a memory limit is a property
+ * of the deployment rather than of a tenant.
  */
 public class BreachDetectionConfig {
 
     private static final Log LOG = LogFactory.getLog(BreachDetectionConfig.class);
 
     private static volatile BreachDetectionConfig instance;
+
+    // The listener's own name, as declared in identity.xml. Held as a string because reading it from
+    // BreachDetectionListener would make this package depend on the package that depends on it.
+    private static final String LISTENER_CLASS =
+            "org.wso2.carbon.identity.breach.detection.listener.BreachDetectionListener";
 
     private final boolean enabledAtDeployment;
     private final int listenerOrder;
@@ -59,9 +66,9 @@ public class BreachDetectionConfig {
     private BreachDetectionConfig() {
 
         IdentityEventListenerConfig listenerConfig = IdentityUtil.readEventListenerProperty(
-                BreachDetectionConstants.LISTENER_TYPE, BreachDetectionConstants.LISTENER_CLASS);
+                UserOperationEventListener.class.getName(), LISTENER_CLASS);
 
-        // Absent declaration means the capability was never wired in, which is off, not on.
+        // A missing declaration means the listener was never wired in, so the switch reads as off.
         this.enabledAtDeployment = listenerConfig != null && Boolean.parseBoolean(listenerConfig.getEnable());
         this.listenerOrder = listenerConfig == null
                 ? BreachDetectionConstants.DEFAULT_LISTENER_ORDER : listenerConfig.getOrder();
@@ -102,10 +109,10 @@ public class BreachDetectionConfig {
     }
 
     /**
-     * The deployment kill switch. False disables the capability for every tenant without removing software,
-     * and leaves stored tenant policy untouched for when it is switched back on.
+     * Reports the value of the listener's {@code enable} attribute. Enforcement of that attribute belongs to
+     * Carbon, which skips a disabled listener before it is called, so this value is read only for logging.
      *
-     * @return whether the capability is switched on at deployment level.
+     * @return whether the listener is declared enabled.
      */
     public boolean isEnabledAtDeployment() {
 
@@ -142,8 +149,8 @@ public class BreachDetectionConfig {
     }
 
     /**
-     * Bulk imports and migration-time writes can be exempted so a migration does not pay a network round trip
-     * per row, or burn third-party quota on data that is already in the store.
+     * Bulk imports and migration-time writes can be exempted, so that a migration does not make one network
+     * call per row or consume third-party quota for data that is already in the store.
      *
      * @return whether bulk operations skip evaluation.
      */
@@ -216,7 +223,7 @@ public class BreachDetectionConfig {
             if (alias == null) {
                 alias = secretAliasFromValue(value);
             }
-            // A secret that could not be resolved stays absent rather than being stored as its own alias.
+            // An alias that cannot be resolved leaves the property absent. The alias text is not stored.
             properties.put(name, alias == null ? value : resolveSecret(resolver, alias));
         }
         sources.put(BreachDetectionUtils.normalizeSourceId(id), properties);
@@ -238,8 +245,9 @@ public class BreachDetectionConfig {
     }
 
     /**
-     * A resolver over the document root, or null when the secure vault is unavailable. Absent a resolver,
-     * secret values read literally rather than failing the whole configuration layer.
+     * Returns a resolver over the document root, or null when the secure vault is unavailable. Without a
+     * resolver a secret value is read literally, so one unavailable vault does not fail the whole
+     * configuration layer.
      */
     private static SecretResolver secretResolver(OMElement element) {
 
@@ -258,7 +266,7 @@ public class BreachDetectionConfig {
     }
 
     /**
-     * @return the resolved value, or null. A vault failure never surfaces the alias or the value.
+     * @return the resolved value, or null. A vault failure is logged without the alias or the value.
      */
     private static String resolveSecret(SecretResolver resolver, String alias) {
 

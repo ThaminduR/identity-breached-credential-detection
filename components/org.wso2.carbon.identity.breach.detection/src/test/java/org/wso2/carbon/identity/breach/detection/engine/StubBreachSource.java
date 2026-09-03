@@ -23,8 +23,6 @@ import org.wso2.carbon.identity.breach.detection.BreachSource;
 import org.wso2.carbon.identity.breach.detection.Outcome;
 import org.wso2.carbon.identity.breach.detection.SourceConfiguration;
 
-import java.util.Collections;
-import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
@@ -96,12 +94,6 @@ class StubBreachSource implements BreachSource {
     public String getId() {
 
         return id;
-    }
-
-    @Override
-    public List<String> getPropertyNames() {
-
-        return Collections.emptyList();
     }
 
     @Override

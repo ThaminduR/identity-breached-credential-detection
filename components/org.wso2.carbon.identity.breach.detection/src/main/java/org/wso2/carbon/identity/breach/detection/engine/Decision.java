@@ -21,8 +21,8 @@ package org.wso2.carbon.identity.breach.detection.engine;
 /**
  * What the engine concluded the caller should do.
  * <p>
- * A refusal because the password is breached and a refusal because it could not be checked are separate
- * decisions, because the user-facing message and the operator response differ.
+ * A refusal because the password is breached and a refusal because it could not be checked are kept
+ * separate, because the message shown to the user and the action an operator takes are different.
  */
 public enum Decision {
 

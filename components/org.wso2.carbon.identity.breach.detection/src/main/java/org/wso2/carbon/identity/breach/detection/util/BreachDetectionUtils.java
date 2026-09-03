@@ -25,7 +25,7 @@ import java.util.MissingResourceException;
 import java.util.ResourceBundle;
 
 /**
- * Small helpers shared across the core. Nothing here ever accepts a candidate password.
+ * Helpers shared across the bundle. No method here accepts a candidate password.
  */
 public class BreachDetectionUtils {
 
@@ -34,9 +34,9 @@ public class BreachDetectionUtils {
     }
 
     /**
-     * Source ids are compared leniently so that a deployment.toml namespace written as {@code local_list} and a
-     * policy entry written as {@code localList} name the same source. The canonical form is what the source
-     * itself returns from {@code getId()}.
+     * Source ids are compared leniently, so that a deployment.toml namespace written as {@code local_list}
+     * and a policy entry written as {@code localList} name the same source. The canonical form is the value
+     * the source returns from {@code getId()}.
      *
      * @param sourceId an id as written in configuration or policy.
      * @return a comparison key.
@@ -50,8 +50,8 @@ public class BreachDetectionUtils {
     }
 
     /**
-     * Resolve a user-facing message. Falls back to the supplied default so a missing translation never leaves a
-     * user staring at a key.
+     * Resolves a user-facing message. Falls back to the supplied default, so that a missing translation
+     * does not show the message key to a user.
      *
      * @param key            message key.
      * @param defaultMessage message to use when the bundle has no entry.
@@ -66,7 +66,7 @@ public class BreachDetectionUtils {
                 return bundle.getString(key);
             }
         } catch (MissingResourceException ignored) {
-            // The bundle is optional; the shipped default is the contract.
+            // The resource bundle is optional. The supplied default is what the caller relies on.
         }
         return defaultMessage;
     }

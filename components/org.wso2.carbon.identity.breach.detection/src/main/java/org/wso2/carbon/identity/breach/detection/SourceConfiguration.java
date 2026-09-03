@@ -23,20 +23,20 @@ import java.util.Optional;
 /**
  * The resolved deployment settings for one source.
  * <p>
- * A source declares the names it reads through {@link BreachSource#getPropertyNames()} and receives the
- * values here. It never reads a configuration file and never resolves a secret alias itself. Each accessor
- * takes the fallback the source wants, so a default is written once, where it is used.
+ * The core reads the configuration and passes the values to the source through
+ * {@link BreachSource#configure}. A source does not read a configuration file and does not resolve a secret
+ * alias. Each accessor takes the fallback value to use when the setting is absent.
  */
 public interface SourceConfiguration {
 
     /**
-     * @param name declared property name.
-     * @return the configured value, or the declared default, or empty.
+     * @param name property name.
+     * @return the configured value, or empty when it is unset or blank.
      */
     Optional<String> getString(String name);
 
     /**
-     * @param name         declared property name.
+     * @param name         property name.
      * @param defaultValue value to use when unset or unparseable.
      * @return the resolved integer.
      */
@@ -44,7 +44,7 @@ public interface SourceConfiguration {
 
 
     /**
-     * @param name         declared property name.
+     * @param name         property name.
      * @param defaultValue value to use when unset.
      * @return the resolved flag.
      */
@@ -54,7 +54,7 @@ public interface SourceConfiguration {
      * Resolve a path, confined to the deployment and configuration directories. A path outside them resolves
      * to empty and is logged.
      *
-     * @param name declared property name.
+     * @param name property name.
      * @return the resolved absolute path, or empty.
      */
     Optional<String> getPath(String name);

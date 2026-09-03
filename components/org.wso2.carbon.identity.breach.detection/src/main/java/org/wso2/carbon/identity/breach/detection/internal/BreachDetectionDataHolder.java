@@ -23,7 +23,7 @@ import org.wso2.carbon.identity.breach.detection.engine.SourceRegistry;
 import org.wso2.carbon.identity.breach.detection.source.LocalBlocklistSource;
 
 /**
- * Wiring, held in one place so the listener and the management service reach the same instances.
+ * Holds the shared instances so that the listener and the component use the same engine and registry.
  */
 public class BreachDetectionDataHolder {
 

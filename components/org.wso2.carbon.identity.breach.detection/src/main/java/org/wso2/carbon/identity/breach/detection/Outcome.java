@@ -19,11 +19,11 @@
 package org.wso2.carbon.identity.breach.detection;
 
 /**
- * What a source concluded about a candidate password. The whole of a source's answer.
+ * What a source concluded about a candidate password.
  * <p>
- * {@link #UNAVAILABLE} is not {@link #NOT_FOUND}. A source that could not reach its corpus returns
- * {@code UNAVAILABLE}. Collapsing the two lets enforcement stop silently while the source still reports
- * itself enabled.
+ * {@link #UNAVAILABLE} and {@link #NOT_FOUND} are different results. A source that could not reach its
+ * corpus returns {@code UNAVAILABLE}. If a source reports the two as equivalent, enforcement stops while the
+ * source continues to report itself as enabled.
  */
 public enum Outcome {
 
@@ -33,6 +33,6 @@ public enum Outcome {
     /** The source positively reports the password as absent from its corpus. */
     NOT_FOUND,
 
-    /** The source could not produce a verdict. Resolved by the failure policy configured for it. */
+    /** The source could not answer. The failure policy configured for the source decides the result. */
     UNAVAILABLE
 }

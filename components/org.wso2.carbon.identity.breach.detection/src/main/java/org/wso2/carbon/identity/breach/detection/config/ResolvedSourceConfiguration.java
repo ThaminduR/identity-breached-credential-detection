@@ -29,17 +29,16 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
 /**
- * The deployment settings for one source, resolved from the configuration layer.
+ * The deployment settings for one source.
  * <p>
- * The source reads nothing itself. It declares the names it uses and the core hands the values over, which is
- * why a connector needs no filesystem access and no vault handle. Secret aliases are already resolved by the
- * configuration layer, so a value arrives here as plain text.
+ * The core reads the configuration and passes the values to the source. A source does not open a
+ * configuration file and does not access the secure vault. Secret aliases are resolved before this object is
+ * constructed, so every value it returns is plain text.
  */
 public class ResolvedSourceConfiguration implements SourceConfiguration {
 
@@ -47,18 +46,11 @@ public class ResolvedSourceConfiguration implements SourceConfiguration {
 
     private final String sourceId;
     private final Map<String, String> values;
-    private final Set<String> declared;
 
-    public ResolvedSourceConfiguration(String sourceId, List<String> declaredNames,
-                                       Map<String, String> configured) {
+    public ResolvedSourceConfiguration(String sourceId, Map<String, String> configured) {
 
         this.sourceId = sourceId;
-        this.declared = new HashSet<>(declaredNames);
-        this.values = new HashMap<>();
-        if (configured != null) {
-            values.putAll(configured);
-            reportUnrecognisedKeys();
-        }
+        this.values = configured == null ? new HashMap<>() : new HashMap<>(configured);
     }
 
     @Override
@@ -100,7 +92,7 @@ public class ResolvedSourceConfiguration implements SourceConfiguration {
             return Optional.empty();
         }
         if (!isWithinPermittedRoots(candidate)) {
-            // Blocklist data is evaluation data, never a path reference the file itself can redirect.
+            // Confine the path so that a configuration edit cannot make the server read an arbitrary file.
             LOG.error("Source '" + sourceId + "' was configured with a path for '" + name
                     + "' outside the permitted locations. Ignoring it.");
             return Optional.empty();
@@ -114,7 +106,7 @@ public class ResolvedSourceConfiguration implements SourceConfiguration {
         addRoot(roots, safeCarbonHome());
         addRoot(roots, System.getProperty("carbon.config.dir.path"));
         if (roots.isEmpty()) {
-            // With no resolvable deployment root there is nothing to confine against; fail closed.
+            // With no resolvable deployment root there is nothing to confine against, so fail closed.
             return false;
         }
         for (Path root : roots) {
@@ -133,7 +125,7 @@ public class ResolvedSourceConfiguration implements SourceConfiguration {
         try {
             roots.add(Paths.get(raw).toAbsolutePath().normalize());
         } catch (Exception ignored) {
-            // An unusable root simply does not widen the permitted set.
+            // An unusable root does not widen the permitted set.
         }
     }
 
@@ -154,16 +146,5 @@ public class ResolvedSourceConfiguration implements SourceConfiguration {
             expanded = expanded.replace("${carbon.home}", carbonHome);
         }
         return expanded.replace('/', File.separatorChar);
-    }
-
-    private void reportUnrecognisedKeys() {
-
-        for (String key : values.keySet()) {
-            if (!declared.contains(key)) {
-                // Reported rather than ignored: a typo must not silently leave a connector on its default.
-                LOG.warn("Breach detection source '" + sourceId + "' has no setting named '" + key
-                        + "'. Check the [breach_detection.sources." + sourceId + "] configuration.");
-            }
-        }
     }
 }

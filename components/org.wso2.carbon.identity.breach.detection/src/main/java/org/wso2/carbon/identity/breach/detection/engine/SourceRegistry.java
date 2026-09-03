@@ -31,10 +31,11 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
- * What is bound right now. The engine holds no reference to any concrete source.
+ * The set of sources bound right now.
  * <p>
- * The bound set is logged on every bind and unbind, so an operator can tell whether a connector loaded
- * without inspecting a directory.
+ * The engine reaches sources through this registry and holds no reference to any concrete source. The bound
+ * set is logged on every bind and unbind, so an operator can confirm that a connector loaded without
+ * inspecting the dropins directory.
  */
 public class SourceRegistry {
 
@@ -77,8 +78,8 @@ public class SourceRegistry {
     }
 
     /**
-     * @return every bound source, ordered by declared priority ascending. Ordering is data, not code: a local
-     * in-process source declares a low number and therefore runs first without the engine knowing what it is.
+     * @return every bound source, ordered by ascending priority. A source declares its own priority, so an
+     * in-process source can be called first without the engine knowing which source it is.
      */
     public List<BreachSource> installed() {
 

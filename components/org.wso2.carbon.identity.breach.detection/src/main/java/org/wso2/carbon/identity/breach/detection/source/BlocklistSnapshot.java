@@ -23,8 +23,9 @@ import java.util.Set;
 /**
  * The digests loaded from the file, paired with the algorithm they were taken with.
  * <p>
- * The two travel together so that a reload cannot leave an evaluation hashing with one algorithm and matching
- * against digests taken with another. A reload builds a new snapshot before swapping the reference.
+ * The digests and the algorithm are held together so that a reload cannot leave an evaluation hashing with
+ * one algorithm and matching against digests taken with another. A reload builds a new snapshot before
+ * replacing the reference.
  */
 final class BlocklistSnapshot {
 

@@ -29,15 +29,14 @@ import org.wso2.carbon.identity.breach.detection.SourceConfiguration;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Arrays;
-import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * The operator's own list of forbidden passwords, answered without a network call.
  * <p>
- * The only source that ships in the core. It crosses no boundary, so it works in a network-isolated
- * deployment. It registers through the same registry as any connector and gets no privileged path.
+ * This is the only source that ships in the bundle. It makes no outbound call, so it works in a
+ * network-isolated deployment. It registers through the same registry as a connector and has no privileged
+ * path through the engine.
  */
 public class LocalBlocklistSource implements BreachSource {
 
@@ -49,8 +48,9 @@ public class LocalBlocklistSource implements BreachSource {
     public static final String PROPERTY_MAX_HEAP_ENTRIES = "max_heap_entries";
 
     /**
-     * A count, not a byte budget: measured at 122.5 bytes an entry for a 40-character digest and 146.5 for a
-     * 64-character one, so this ceiling costs 584 MB or 699 MB depending on the format.
+     * This limits the number of entries, not the bytes used. An entry was measured at 122.5 bytes for a
+     * 40-character digest and 146.5 bytes for a 64-character one, so this ceiling costs 584 MB or 699 MB
+     * depending on the format.
      */
     private static final int DEFAULT_MAX_HEAP_ENTRIES = 5_000_000;
 
@@ -70,16 +70,10 @@ public class LocalBlocklistSource implements BreachSource {
 
 
     @Override
-    public List<String> getPropertyNames() {
-
-        return Arrays.asList(PROPERTY_ENABLE, PROPERTY_PATH, PROPERTY_FORMAT, PROPERTY_MAX_HEAP_ENTRIES);
-    }
-
-    @Override
     public int getPriority() {
 
-        // In-process and certain. Consulted before any network round trip, so the passwords an operator most
-        // wants blocked never leave the deployment and never consume third-party quota.
+        // Called before any network request, so the passwords an operator most wants blocked do not leave
+        // the deployment and do not consume third-party quota.
         return 100;
     }
 
@@ -92,7 +86,7 @@ public class LocalBlocklistSource implements BreachSource {
         String configuredPath = configuration.getPath(PROPERTY_PATH).orElse(null);
 
         // Configuration is handed over on bind and again on every reconfiguration, so an unchanged
-        // configuration must not rebuild an index that is already correct.
+        // configuration must not rebuild a list that is already correct.
         boolean unchanged = snapshot.get() != null
                 && format == configuredFormat
                 && maxEntries == maxHeapEntries
@@ -103,7 +97,7 @@ public class LocalBlocklistSource implements BreachSource {
         this.maxHeapEntries = maxEntries;
         this.path = configuredPath == null ? null : Paths.get(configuredPath);
         if (!enable) {
-            // Released rather than merely ignored: a parked corpus should cost neither heap nor a mapping.
+            // Release the digests so that a list that is switched off uses no heap.
             snapshot.set(null);
             LOG.info("The local breach blocklist is switched off in deployment configuration.");
             return;
@@ -119,10 +113,10 @@ public class LocalBlocklistSource implements BreachSource {
     }
 
     /**
-     * Supplying a readable file is still what switches the list on; {@link #PROPERTY_ENABLE} exists to park a
-     * configured list without unpicking its settings. It is a deployment property rather than a per-tenant one
-     * because the file itself is deployment-wide - a tenant-level toggle over one shared file would let two
-     * organizations disagree about a thing neither of them owns.
+     * Supplying a readable file is what switches the list on. {@link #PROPERTY_ENABLE} exists so that a
+     * configured list can be switched off without removing its settings. It is a deployment property rather
+     * than a per-tenant one because the file is deployment-wide, and a per-tenant switch over one shared file
+     * would let two organizations disagree about a file neither of them owns.
      */
     @Override
     public boolean isEnabled(String tenantDomain) {
@@ -133,8 +127,8 @@ public class LocalBlocklistSource implements BreachSource {
 
 
     /**
-     * A list that failed to load reports itself disabled above, so the engine never consults it and this is
-     * not reached. See the open question on that behaviour.
+     * A list that failed to load reports itself as disabled, so the engine does not consult it and this
+     * method is not reached. See the open question recorded against that behaviour.
      */
     @Override
     public boolean refusesWhenUnavailable(String tenantDomain) {
@@ -147,7 +141,7 @@ public class LocalBlocklistSource implements BreachSource {
 
         BlocklistSnapshot current = snapshot.get();
         if (current == null) {
-            // Not reached through the engine: isEnabled reports false without a snapshot.
+            // Not reached through the engine, because isEnabled reports false when there is no snapshot.
             return Outcome.UNAVAILABLE;
         }
         String digest = credential.digestHex(current.getFormat().getDigestAlgorithm());
@@ -155,8 +149,8 @@ public class LocalBlocklistSource implements BreachSource {
     }
 
     /**
-     * Rebuilds the index. The new one is built in full before the reference is swapped. A file that cannot be
-     * parsed leaves the previous list in effect rather than emptying it.
+     * Rebuilds the list. The new list is built in full before the reference is replaced. A file that cannot
+     * be read leaves the previous list in effect instead of emptying it.
      */
     private void reload() {
 

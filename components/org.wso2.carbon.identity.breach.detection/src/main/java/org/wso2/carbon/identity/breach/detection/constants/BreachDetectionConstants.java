@@ -28,15 +28,10 @@ public class BreachDetectionConstants {
 
     }
 
-    /** Listener registration, mirroring the declaration in identity.xml. */
-    public static final String LISTENER_TYPE = "org.wso2.carbon.user.core.listener.UserOperationEventListener";
-
-    public static final String LISTENER_CLASS =
-            "org.wso2.carbon.identity.breach.detection.listener.BreachDetectionListener";
-
     /**
-     * After input validation at 3, so a password failing composition never reaches a breach source, and before
-     * the service extension at 10000, so in-product policy resolves before any customer extension runs.
+     * Placed after input validation at 3, so a password that fails composition rules never reaches a breach
+     * source, and before the service extension at 10000, so in-product policy resolves before a customer
+     * extension runs.
      */
     public static final int DEFAULT_LISTENER_ORDER = 420;
 
@@ -49,7 +44,7 @@ public class BreachDetectionConstants {
     public static final String CONFIG_ATTRIBUTE_NAME = "name";
     public static final String CONFIG_ATTRIBUTE_SECRET_ALIAS = "secretAlias";
 
-    /** The one source that ships in the core. */
+    /** The source that ships in this bundle. */
     public static final String LOCAL_LIST_SOURCE_ID = "localList";
 
     /** Operator settings, read from identity.xml. */
@@ -60,13 +55,14 @@ public class BreachDetectionConstants {
     public static final int DEFAULT_WORKER_THREADS = 20;
 
     /**
-     * Error codes. A policy rejection is a client error carrying the reason - never a server fault, which is
-     * indistinguishable from an outage and stops portals rendering the cause.
+     * Error codes. A policy rejection is reported as a client error carrying the reason. It is not reported
+     * as a server fault, because a server fault cannot be distinguished from an outage and leaves a portal
+     * with nothing to display.
      */
     public static final String ERROR_CODE_BREACHED_PASSWORD = "BRD-60001";
     public static final String ERROR_CODE_CANNOT_VERIFY = "BRD-60002";
 
-    /** Message keys, resolved through the bundled resource bundle so they localize with everything else. */
+    /** Message keys, resolved through the bundled resource bundle so that they localize with the product. */
     public static final String MESSAGE_KEY_BREACHED = "breach.detection.password.breached";
     public static final String MESSAGE_KEY_CANNOT_VERIFY = "breach.detection.password.unverifiable";
 

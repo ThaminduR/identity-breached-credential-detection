@@ -36,11 +36,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Orders the sources a tenant enabled, bounds each call, stops at the first match, contains failures to the
- * source that caused them, and resolves the verdicts into one decision.
+ * Evaluates a candidate password against the sources an organization enabled.
  * <p>
- * Knows nothing about any concrete source. Ordering comes from the priority each source declares, so a local
- * source runs before a network round trip and a match there costs no request.
+ * The engine orders the sources, bounds each call with the evaluation timeout, stops at the first match,
+ * contains a failure to the source that caused it, and resolves the outcomes into one decision. It holds no
+ * reference to any concrete source. Call order comes from the priority each source declares, so an
+ * in-process source is called before one that makes a network request.
  */
 public class BreachEvaluationEngine {
 
@@ -56,8 +57,10 @@ public class BreachEvaluationEngine {
         this.timeoutMs = timeoutMs;
         int threads = Math.max(1, workerThreads);
         AtomicInteger counter = new AtomicInteger();
-        // Core size equals the maximum: a ThreadPoolExecutor only grows past the core size once the queue is
-        // full, so a smaller core with a bounded queue would serialise every evaluation onto one thread.
+        // Core size equals the maximum. A ThreadPoolExecutor grows past the core size only once the queue
+        // is full, so a smaller core with a bounded queue would serialise evaluations onto one thread. The
+        // queue is bounded and the rejection policy aborts, so an overloaded server returns UNAVAILABLE
+        // immediately instead of making every request wait out the timeout.
         this.executor = new ThreadPoolExecutor(threads, threads, 60L, TimeUnit.SECONDS,
                 new ArrayBlockingQueue<>(threads * 10),
                 runnable -> {
@@ -70,7 +73,7 @@ public class BreachEvaluationEngine {
     }
 
     /**
-     * Evaluate a candidate against every source this organization enabled. Clears the credential before
+     * Evaluates a candidate against every source this organization enabled. Clears the credential before
      * returning, unless a source timed out and may still be reading it.
      *
      * @param credential   the candidate password.
@@ -81,14 +84,14 @@ public class BreachEvaluationEngine {
 
         List<BreachSource> plan = plan(tenantDomain);
         if (plan.isEmpty()) {
-            // No source wants to be consulted here, so nothing is being checked. That is a legitimate
-            // state - it is what an organization that has not switched anything on looks like.
+            // No source is enabled, so nothing is checked. This is the expected state for an organization
+            // that has not switched the feature on.
             credential.clear();
             return Decision.ACCEPT;
         }
 
-        // Set when a call times out: the worker may still be reading the characters, so they are left to the
-        // collector rather than zeroed underneath a call in flight.
+        // Set when a call times out. The worker may still be reading the characters, so the array is left
+        // for the garbage collector instead of being zeroed under a call that is still running.
         AtomicBoolean credentialInFlight = new AtomicBoolean();
         List<Outcome> outcomes = new ArrayList<>(plan.size());
 
@@ -96,7 +99,7 @@ public class BreachEvaluationEngine {
             Outcome outcome = call(source, idOf(source), credential, tenantDomain, credentialInFlight);
             outcomes.add(outcome);
             if (outcome == Outcome.FOUND) {
-                // A match ends it. Nothing after this needs asking, and no network call is worth making.
+                // A match ends the evaluation. No later source is consulted.
                 break;
             }
         }
@@ -116,13 +119,13 @@ public class BreachEvaluationEngine {
     }
 
     /**
-     * The sources this organization wants consulted, cheapest first. Only bound sources can appear, because
-     * only a source can enable itself.
+     * @return the sources this organization enabled, cheapest first. Only a bound source can appear,
+     * because enablement is the source's own decision.
      */
     private List<BreachSource> plan(String tenantDomain) {
 
         List<BreachSource> planned = new ArrayList<>();
-        // The registry already orders by declared priority, so an in-process source runs before a round trip.
+        // The registry orders by declared priority, so an in-process source is called before a remote one.
         for (BreachSource source : registry.installed()) {
             try {
                 if (source.isEnabled(tenantDomain)) {
@@ -165,7 +168,8 @@ public class BreachEvaluationEngine {
     }
 
     /**
-     * The id, or a placeholder if the source cannot supply one. Nothing a source does may fail the write.
+     * Returns the source id, or a placeholder when the source cannot supply one. A source must not be able
+     * to fail the password write.
      */
     private static String idOf(BreachSource source) {
 
@@ -192,7 +196,7 @@ public class BreachEvaluationEngine {
 
     private Outcome contain(String sourceId, Throwable t) {
 
-        // Contained to this source: one connector's defect must not take the others down with it.
+        // Contain the failure to this source so that a defect in one connector does not affect the others.
         LOG.error("Breach source '" + sourceId + "' failed while evaluating a password. The source is treated "
                 + "as unavailable and the remaining sources are unaffected.", t);
         return Outcome.UNAVAILABLE;
@@ -220,7 +224,7 @@ public class BreachEvaluationEngine {
 
         int unavailable = outcomes.size() - answered;
         if (unavailable > 0 && answered == 0) {
-            // The signal that matters most: everything looks healthy from outside while nothing is checked.
+            // Logged at ERROR: the feature reports itself as enabled while no password is being checked.
             LOG.error("Breached password detection is not enforcing for tenant '" + tenantDomain
                     + "': no enabled source could return a verdict. " + describe(plan, outcomes));
         } else if (unavailable > 0 && LOG.isWarnEnabled()) {
@@ -232,7 +236,7 @@ public class BreachEvaluationEngine {
     }
 
     /**
-     * Which source returned what, for the log. Each source logs its own reason.
+     * Describes which source returned which outcome, for one log line. Each source logs its own reason.
      */
     private static String describe(List<BreachSource> plan, List<Outcome> outcomes) {
 

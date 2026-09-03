@@ -18,32 +18,22 @@
 
 package org.wso2.carbon.identity.breach.detection;
 
-import java.util.List;
-
 /**
- * A breach-intelligence source, published as an OSGi service.
+ * A breach intelligence source, published as an OSGi service.
  * <p>
- * Every method is abstract, so enablement, failure action and configuration cannot be inherited by accident.
- * Every source is called on a worker thread and bounded by the evaluation timeout, so one that hangs cannot
- * hang the credential write.
+ * Every method is abstract. A source states its own enablement, failure behaviour and configuration rather
+ * than inheriting a default. The engine calls every source on a worker thread and applies the evaluation
+ * timeout, so a source that blocks does not block the password write.
  */
 public interface BreachSource {
 
     /**
-     * @return a stable id. Deployment configuration is namespaced on it. Lowercase, no spaces.
+     * @return a stable id, lowercase and without spaces. Deployment configuration is namespaced on it.
      */
     String getId();
 
     /**
-     * The deployment setting names this source reads. A configured key that is not listed here is reported
-     * as unrecognised, so a typo does not silently leave the source on its defaults.
-     *
-     * @return the setting names, or an empty list.
-     */
-    List<String> getPropertyNames();
-
-    /**
-     * @return a cost hint. The engine calls sources in ascending order.
+     * @return the call order hint. The engine calls sources in ascending order of this value.
      */
     int getPriority();
 
@@ -55,8 +45,9 @@ public interface BreachSource {
     void configure(SourceConfiguration configuration);
 
     /**
-     * Whether this organization wants the source consulted, and whether it is set up well enough to answer.
-     * A source that is not configured reports false here; there is no separate configured check.
+     * Whether this organization wants the source consulted, and whether the source has enough
+     * configuration to answer. A source that cannot answer returns false. There is no separate check for
+     * whether a source is configured.
      *
      * @param tenantDomain the organization asking.
      * @return true if the source should be consulted.
@@ -70,11 +61,11 @@ public interface BreachSource {
     boolean refusesWhenUnavailable(String tenantDomain);
 
     /**
-     * Reach a verdict on the candidate password.
+     * Evaluate the candidate password.
      * <p>
-     * Return {@link Outcome#UNAVAILABLE} for anything that is not a positive determination, and log why.
-     * Never return {@link Outcome#NOT_FOUND} because a call failed. Never log, cache or transmit the
-     * credential, and do not retain it past this call.
+     * Return {@link Outcome#UNAVAILABLE} for any result that is not a positive determination, and log the
+     * reason. Do not return {@link Outcome#NOT_FOUND} when a call fails. Do not log, cache or transmit the
+     * credential, and do not retain it after this method returns.
      *
      * @param credential   the candidate password. Do not retain it past this call.
      * @param tenantDomain the organization the password is being set in.

@@ -47,8 +47,8 @@ import java.util.Map;
 /**
  * Starts the capability and publishes its services.
  * <p>
- * The {@link BreachSource} reference is dynamic and multiple-cardinality, so a connector added to
- * {@code dropins} binds without a restart and removing it unbinds one service.
+ * The {@link BreachSource} reference is dynamic and has multiple cardinality, so a connector added to
+ * {@code dropins} binds without a restart, and removing it unbinds that one service.
  */
 @Component(
         name = "identity.breach.detection.component",
@@ -75,13 +75,13 @@ public class BreachDetectionServiceComponent {
         LocalBlocklistSource localBlocklistSource = new LocalBlocklistSource();
         holder.setLocalBlocklistSource(localBlocklistSource);
 
-        // The in-tree offline list registers exactly like a connector, which is also what configures it: the
-        // bind callback below fires for it too. The engine has no special path for it.
+        // The local list registers as an OSGi service in the same way a connector does, so the bind
+        // callback below configures it as well. The engine has no separate path for it.
         registrations.add(bundleContext.registerService(BreachSource.class, localBlocklistSource, null));
         registrations.add(bundleContext.registerService(UserOperationEventListener.class,
                 new BreachDetectionListener(), null));
 
-        // Re-applied after the reload above, since a source may have bound before this component activated.
+        // Re-applied after the reload above, because a source may have bound before this component activated.
         for (BreachSource source : registry.installed()) {
             configure(source);
         }
@@ -99,23 +99,23 @@ public class BreachDetectionServiceComponent {
             }
         }
         if (!orphaned.isEmpty()) {
-            // Reported rather than ignored: it usually means a connector JAR is missing, which is a deployment
-            // action rather than a configuration one.
+            // Reported because it usually means a connector JAR is missing. Correcting it is a deployment
+            // step, not a configuration change.
             LOG.warn("Breach detection configuration names sources that are not installed: " + orphaned
                     + ". Add the connector JARs to repository/components/dropins, or remove the configuration.");
         }
     }
 
     /**
-     * Hands a source the settings it declared. The only place a source's configuration is assembled, and
-     * contained so that one connector cannot stop the others starting.
+     * Hands a source the settings configured for it. This is the only place a source's configuration is
+     * assembled. Failures are contained so that one connector cannot stop the others from starting.
      */
     private static void configure(BreachSource source) {
 
         try {
             Map<String, String> configured = BreachDetectionConfig.getInstance()
                     .getSourceProperties(BreachDetectionUtils.normalizeSourceId(source.getId()));
-            source.configure(new ResolvedSourceConfiguration(source.getId(), source.getPropertyNames(), configured));
+            source.configure(new ResolvedSourceConfiguration(source.getId(), configured));
         } catch (Throwable t) {
             LOG.error("Failed to configure breach source '" + source.getId()
                     + "'. It will report itself as not configured.", t);
@@ -164,7 +164,7 @@ public class BreachDetectionServiceComponent {
 
 
     /**
-     * Held so that identity.xml has been parsed before this component reads it.
+     * Referenced so that identity.xml is parsed before this component reads it.
      */
     @Reference(
             name = "identity.core.init.event.service",
@@ -175,7 +175,7 @@ public class BreachDetectionServiceComponent {
     )
     protected void setIdentityCoreInitializedEventService(IdentityCoreInitializedEvent event) {
 
-        // Nothing to hold; the reference exists purely for start-up ordering.
+        // Nothing to hold. The reference exists only to order start-up.
     }
 
     protected void unsetIdentityCoreInitializedEventService(IdentityCoreInitializedEvent event) {

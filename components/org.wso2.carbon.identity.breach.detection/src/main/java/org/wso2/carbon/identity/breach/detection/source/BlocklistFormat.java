@@ -23,8 +23,9 @@ import java.util.Locale;
 /**
  * How the operator's file is written. Plaintext is hashed at load, so the in-memory form is always digests.
  * <p>
- * No {@code auto} member and no fallback. The file determines the algorithm, and a wrong guess does not fail,
- * it stops matching. An undeclared or unrecognised value leaves the source not configured.
+ * There is no {@code auto} member and no fallback value. The file determines the algorithm, and guessing
+ * wrong does not raise an error, it silently stops matching. An absent or unrecognised value leaves the
+ * source unconfigured.
  */
 public enum BlocklistFormat {
 
