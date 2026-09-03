@@ -40,7 +40,10 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Operator configuration: the deployment switch, the evaluation bounds, and the per-source namespaces.
+ * The per-source deployment settings, read from the {@code <BreachDetection>} element.
+ * <p>
+ * Constructed once, when the component activates, so that identity.xml has already been parsed. Changing the
+ * file requires a server restart, so the values never change after construction.
  * <p>
  * Read from identity.xml, which the config parser renders from {@code [breach_detection]} in deployment.toml.
  * This configuration is kept separate from tenant policy for two reasons. Switching the feature off must work
@@ -51,8 +54,6 @@ public class BreachDetectionConfig {
 
     private static final Log LOG = LogFactory.getLog(BreachDetectionConfig.class);
 
-    private static volatile BreachDetectionConfig instance;
-
     // The listener's own name, as declared in identity.xml. Held as a string because reading it from
     // BreachDetectionListener would make this package depend on the package that depends on it.
     private static final String LISTENER_CLASS =
@@ -60,10 +61,9 @@ public class BreachDetectionConfig {
 
     private final boolean enabledAtDeployment;
     private final int listenerOrder;
-    private final Map<String, String> globalProperties;
     private final Map<String, Map<String, String>> sourceProperties;
 
-    private BreachDetectionConfig() {
+    public BreachDetectionConfig() {
 
         IdentityEventListenerConfig listenerConfig = IdentityUtil.readEventListenerProperty(
                 UserOperationEventListener.class.getName(), LISTENER_CLASS);
@@ -73,40 +73,9 @@ public class BreachDetectionConfig {
         this.listenerOrder = listenerConfig == null
                 ? BreachDetectionConstants.DEFAULT_LISTENER_ORDER : listenerConfig.getOrder();
 
-        Map<String, String> globals = new LinkedHashMap<>();
         Map<String, Map<String, String>> sources = new LinkedHashMap<>();
-        parse(globals, sources);
-        this.globalProperties = Collections.unmodifiableMap(globals);
+        parse(sources);
         this.sourceProperties = Collections.unmodifiableMap(sources);
-    }
-
-    public static BreachDetectionConfig getInstance() {
-
-        BreachDetectionConfig local = instance;
-        if (local == null) {
-            synchronized (BreachDetectionConfig.class) {
-                local = instance;
-                if (local == null) {
-                    local = new BreachDetectionConfig();
-                    instance = local;
-                }
-            }
-        }
-        return local;
-    }
-
-    /**
-     * Re-read identity.xml. Called once when the component activates, so that the configuration is parsed
-     * after the identity core has initialised.
-     *
-     * @return the reloaded configuration.
-     */
-    public static BreachDetectionConfig reload() {
-
-        synchronized (BreachDetectionConfig.class) {
-            instance = new BreachDetectionConfig();
-            return instance;
-        }
     }
 
     /**
@@ -134,19 +103,7 @@ public class BreachDetectionConfig {
         return sourceProperties.get(normalizedSourceId);
     }
 
-    /**
-     * Bulk imports and migration-time writes can be exempted, so that a migration does not make one network
-     * call per row or consume third-party quota for data that is already in the store.
-     *
-     * @return whether bulk operations skip evaluation.
-     */
-    public boolean isBulkExempt() {
-
-        return BreachDetectionUtils.parseBoolean(globalProperties.get(BreachDetectionConstants.CONFIG_EXEMPT_BULK),
-                false);
-    }
-
-    private void parse(Map<String, String> globals, Map<String, Map<String, String>> sources) {
+    private void parse(Map<String, Map<String, String>> sources) {
 
         OMElement root;
         try {
@@ -164,17 +121,12 @@ public class BreachDetectionConfig {
         SecretResolver resolver = secretResolver(root);
 
         for (OMElement element : children(root)) {
-            String localName = element.getLocalName();
-            if (BreachDetectionConstants.CONFIG_PROPERTY_ELEMENT.equals(localName)) {
-                String name = attribute(element, BreachDetectionConstants.CONFIG_ATTRIBUTE_NAME);
-                if (name != null) {
-                    globals.put(name, text(element));
-                }
-            } else if (BreachDetectionConstants.CONFIG_SOURCES_ELEMENT.equals(localName)) {
-                for (OMElement source : children(element)) {
-                    if (BreachDetectionConstants.CONFIG_SOURCE_ELEMENT.equals(source.getLocalName())) {
-                        parseSource(source, sources, resolver);
-                    }
+            if (!BreachDetectionConstants.CONFIG_SOURCES_ELEMENT.equals(element.getLocalName())) {
+                continue;
+            }
+            for (OMElement source : children(element)) {
+                if (BreachDetectionConstants.CONFIG_SOURCE_ELEMENT.equals(source.getLocalName())) {
+                    parseSource(source, sources, resolver);
                 }
             }
         }

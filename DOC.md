@@ -123,23 +123,6 @@ To disable the feature for every organization without removing software, set `en
 
 ## Configuration options
 
-### Deployment options
-
-Configured under `[breach_detection]`.
-
-<table>
-    <tr>
-        <th>Parameter</th>
-        <th>Description</th>
-    </tr>
-    <tr>
-        <td>exempt_bulk_operations</td>
-        <td>[Optional] Skips evaluation for writes the server attributes to a bulk flow, such as a user import
-        or a migration. Ordinary password changes are still evaluated. <br> <b>Default:</b>
-        <code>false</code></td>
-    </tr>
-</table>
-
 ### Local blocklist options
 
 Configured under `[breach_detection.sources.localList]`.
@@ -352,14 +335,19 @@ which is consistent with other file-backed configuration in the product. Plan up
 Connector bundles are the exception: adding one to `dropins` binds it without a restart, because that is a
 service event rather than a file change.
 
-### Exempt bulk operations during migration
+### Switch the feature off for a migration window
 
-A migration that imports a large number of users should not perform a check per row.
+There is no per-operation exemption. A migration that must not evaluate passwords uses the deployment switch,
+which requires a restart at each end of the window.
 
 ```toml
-[breach_detection]
-exempt_bulk_operations = true
+[event.default_listener.breach_detection]
+enable = false
 ```
+
+Before using it, consider whether the migrated passwords are the ones you most want checked. The local
+blocklist answers from memory, and a remote connector caches each digest prefix, so a bulk import is usually
+cheaper to evaluate than it appears.
 
 ### Configure a remote source's API key with care
 

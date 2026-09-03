@@ -64,9 +64,9 @@ public class BreachDetectionServiceComponent {
      * SCR binds every published source before this component activates, but the configuration is only read
      * during activation. A source bound before that point is configured by the loop in
      * {@link #activate(ComponentContext)}; one bound after it is configured by its own bind callback. This
-     * flag keeps a source from being configured twice.
+     * field keeps a source from being configured twice, and is null until activation.
      */
-    private static volatile boolean active;
+    private volatile BreachDetectionConfig config;
 
     private LocalBlocklistSource localBlocklistSource;
 
@@ -77,7 +77,7 @@ public class BreachDetectionServiceComponent {
         BreachDetectionDataHolder holder = BreachDetectionDataHolder.getInstance();
         SourceRegistry registry = holder.getSourceRegistry();
 
-        BreachDetectionConfig config = BreachDetectionConfig.reload();
+        config = new BreachDetectionConfig();
 
         holder.setEvaluationEngine(new BreachEvaluationEngine(registry));
 
@@ -87,12 +87,11 @@ public class BreachDetectionServiceComponent {
         // callback below configures it too.
         registrations.add(bundleContext.registerService(BreachSource.class, localBlocklistSource, null));
         registrations.add(bundleContext.registerService(UserOperationEventListener.class,
-                new BreachDetectionListener(), null));
+                new BreachDetectionListener(config), null));
 
         for (BreachSource source : registry.installed()) {
             configure(source);
         }
-        active = true;
 
         LOG.info("Breached password detection started. Deployment switch: "
                 + (config.isEnabledAtDeployment() ? "on" : "off")
@@ -103,11 +102,11 @@ public class BreachDetectionServiceComponent {
      * Hands a source the settings configured for it. This is the only place a source's configuration is
      * assembled. Failures are contained so that one connector cannot stop the others from starting.
      */
-    private static void configure(BreachSource source) {
+    private void configure(BreachSource source) {
 
         try {
-            Map<String, String> configured = BreachDetectionConfig.getInstance()
-                    .getSourceProperties(BreachDetectionUtils.normalizeSourceId(source.getId()));
+            Map<String, String> configured =
+                    config.getSourceProperties(BreachDetectionUtils.normalizeSourceId(source.getId()));
             source.configure(new ResolvedSourceConfiguration(source.getId(), configured));
         } catch (Throwable t) {
             LOG.error("Failed to configure breach source '" + source.getId()
@@ -126,7 +125,7 @@ public class BreachDetectionServiceComponent {
             }
         }
         registrations.clear();
-        active = false;
+        config = null;
 
         if (localBlocklistSource != null) {
             localBlocklistSource.shutdown();
@@ -144,7 +143,7 @@ public class BreachDetectionServiceComponent {
     protected void setBreachSource(BreachSource source) {
 
         BreachDetectionDataHolder.getInstance().getSourceRegistry().bind(source);
-        if (active) {
+        if (config != null) {
             configure(source);
         }
     }

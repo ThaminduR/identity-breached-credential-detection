@@ -18,7 +18,9 @@
 
 package org.wso2.carbon.identity.breach.detection.source;
 
+import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
+import org.wso2.carbon.identity.breach.detection.config.ResolvedSourceConfiguration;
 import org.wso2.carbon.identity.breach.detection.model.Credential;
 import org.wso2.carbon.identity.breach.detection.model.Decision;
 
@@ -28,7 +30,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
@@ -40,6 +44,21 @@ import static org.testng.Assert.assertTrue;
 public class LocalBlocklistSourceTest {
 
     private static final String TENANT = "carbon.super";
+
+    private static Path carbonHome;
+
+    /**
+     * The real configuration object confines a path to the deployment, so the blocklist files these tests
+     * write have to live under a carbon.home. Using it rather than a stub means the tests exercise that
+     * confinement instead of bypassing it.
+     */
+    @BeforeClass
+    public void setUp() throws IOException {
+
+        carbonHome = Files.createTempDirectory("carbon-home-");
+        carbonHome.toFile().deleteOnExit();
+        System.setProperty("carbon.home", carbonHome.toString());
+    }
 
     @Test
     public void declaresItselfOfflineAndCheapSoTheEngineConsultsItFirst() {
@@ -78,7 +97,7 @@ public class LocalBlocklistSourceTest {
     public void withNoFileConfiguredTheSourceIsNotEnabled() {
 
         LocalBlocklistSource source = new LocalBlocklistSource();
-        source.configure(new MapSourceConfiguration());
+        source.configure(settings());
 
         assertFalse(source.isEnabled(TENANT));
         assertEquals(source.check(candidate("Password@1"), TENANT), Decision.ACCEPT);
@@ -92,8 +111,8 @@ public class LocalBlocklistSourceTest {
     public void aFileWithNoDeclaredFormatLeavesTheSourceNotConfigured() throws IOException {
 
         LocalBlocklistSource source = new LocalBlocklistSource();
-        source.configure(new MapSourceConfiguration()
-                .set(LocalBlocklistSource.PROPERTY_PATH, write(Collections.singletonList("Password@1")).toString()));
+        source.configure(settings(LocalBlocklistSource.PROPERTY_PATH,
+                write(Collections.singletonList("Password@1")).toString()));
 
         assertFalse(source.isEnabled(TENANT));
         source.shutdown();
@@ -106,10 +125,9 @@ public class LocalBlocklistSourceTest {
         LocalBlocklistSource source = configured(file, "plaintext");
         assertTrue(source.isEnabled(TENANT));
 
-        source.configure(new MapSourceConfiguration()
-                .set(LocalBlocklistSource.PROPERTY_ENABLE, false)
-                .set(LocalBlocklistSource.PROPERTY_PATH, file.toString())
-                .set(LocalBlocklistSource.PROPERTY_FORMAT, "plaintext"));
+        source.configure(settings(LocalBlocklistSource.PROPERTY_ENABLE, "false",
+                LocalBlocklistSource.PROPERTY_PATH, file.toString(),
+                LocalBlocklistSource.PROPERTY_FORMAT, "plaintext"));
 
         assertFalse(source.isEnabled(TENANT));
         assertEquals(source.check(candidate("Password@1"), TENANT), Decision.ACCEPT);
@@ -135,9 +153,8 @@ public class LocalBlocklistSourceTest {
         Files.delete(file);
 
         // Reconfiguring against a different path forces a load attempt; the old list must survive it.
-        source.configure(new MapSourceConfiguration()
-                .set(LocalBlocklistSource.PROPERTY_PATH, file.toString())
-                .set(LocalBlocklistSource.PROPERTY_FORMAT, "sha1"));
+        source.configure(settings(LocalBlocklistSource.PROPERTY_PATH, file.toString(),
+                LocalBlocklistSource.PROPERTY_FORMAT, "sha1"));
 
         assertEquals(source.check(candidate("Password@1"), TENANT), Decision.REFUSE_BREACHED,
                 "The previous list must stay in effect rather than emptying itself.");
@@ -147,9 +164,8 @@ public class LocalBlocklistSourceTest {
     private LocalBlocklistSource configured(Path file, String format) {
 
         LocalBlocklistSource source = new LocalBlocklistSource();
-        source.configure(new MapSourceConfiguration()
-                .set(LocalBlocklistSource.PROPERTY_PATH, file.toString())
-                .set(LocalBlocklistSource.PROPERTY_FORMAT, format));
+        source.configure(settings(LocalBlocklistSource.PROPERTY_PATH, file.toString(),
+                LocalBlocklistSource.PROPERTY_FORMAT, format));
         return source;
     }
 
@@ -158,9 +174,21 @@ public class LocalBlocklistSourceTest {
         return new Credential(password.toCharArray());
     }
 
+    /**
+     * @param nameValuePairs alternating property name and value.
+     */
+    private static ResolvedSourceConfiguration settings(String... nameValuePairs) {
+
+        Map<String, String> values = new LinkedHashMap<>();
+        for (int i = 0; i < nameValuePairs.length; i += 2) {
+            values.put(nameValuePairs[i], nameValuePairs[i + 1]);
+        }
+        return new ResolvedSourceConfiguration("localList", values);
+    }
+
     private static Path write(List<String> lines) throws IOException {
 
-        Path file = Files.createTempFile("local-blocklist-", ".txt");
+        Path file = Files.createTempFile(carbonHome, "local-blocklist-", ".txt");
         file.toFile().deleteOnExit();
         Files.write(file, String.join("\n", lines).concat("\n").getBytes(StandardCharsets.UTF_8));
         return file;

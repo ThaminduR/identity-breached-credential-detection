@@ -47,8 +47,6 @@ public class BreachDetectionConstants {
     /** The source that ships in this bundle. */
     public static final String LOCAL_LIST_SOURCE_ID = "localList";
 
-    /** Operator settings, read from identity.xml. */
-    public static final String CONFIG_EXEMPT_BULK = "exempt_bulk_operations";
 
     /**
      * Error codes. A policy rejection is reported as a client error carrying the reason. It is not reported

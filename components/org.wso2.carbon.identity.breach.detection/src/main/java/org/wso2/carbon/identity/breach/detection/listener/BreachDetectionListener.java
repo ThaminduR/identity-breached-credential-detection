@@ -28,8 +28,6 @@ import org.wso2.carbon.identity.breach.detection.internal.BreachDetectionDataHol
 import org.wso2.carbon.identity.breach.detection.util.BreachDetectionUtils;
 import org.wso2.carbon.identity.breach.detection.model.Credential;
 import org.wso2.carbon.identity.core.AbstractIdentityUserOperationEventListener;
-import org.wso2.carbon.identity.core.context.IdentityContext;
-import org.wso2.carbon.identity.core.context.model.Flow;
 import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.mgt.policy.PolicyViolationException;
@@ -52,6 +50,13 @@ import java.util.Map;
 public class BreachDetectionListener extends AbstractIdentityUserOperationEventListener {
 
     private static final Log LOG = LogFactory.getLog(BreachDetectionListener.class);
+
+    private final BreachDetectionConfig config;
+
+    public BreachDetectionListener(BreachDetectionConfig config) {
+
+        this.config = config;
+    }
 
     @Override
     public int getExecutionOrderId() {
@@ -116,10 +121,6 @@ public class BreachDetectionListener extends AbstractIdentityUserOperationEventL
             return true;
         }
 
-        if (isExemptBulkWrite(currentFlow())) {
-            return true;
-        }
-
         // A copy, because the engine clears it and the write that follows needs the original.
         Credential candidate = new Credential(Arrays.copyOf(chars, chars.length));
 
@@ -155,26 +156,6 @@ public class BreachDetectionListener extends AbstractIdentityUserOperationEventL
 
         String message = BreachDetectionUtils.getMessage(messageKey, fallback);
         return new UserStoreClientException(message, errorCode, new PolicyViolationException(message));
-    }
-
-    /**
-     * Whether this write is a bulk operation that the operator chose to exempt.
-     */
-    private boolean isExemptBulkWrite(Flow flow) {
-
-        return flow != null && flow.getName() == Flow.Name.BULK_RESOURCE_UPDATE
-                && BreachDetectionConfig.getInstance().isBulkExempt();
-    }
-
-    private Flow currentFlow() {
-
-        try {
-            IdentityContext context = IdentityContext.getThreadLocalIdentityContext();
-            return context == null ? null : context.getFlow();
-        } catch (Throwable t) {
-            LOG.debug("No identity context is available, so the write is not treated as a bulk operation.");
-            return null;
-        }
     }
 
     private String resolveTenantDomain(UserStoreManager userStoreManager) {
