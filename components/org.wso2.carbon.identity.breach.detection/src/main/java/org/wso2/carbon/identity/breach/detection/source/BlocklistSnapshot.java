@@ -21,12 +21,10 @@ package org.wso2.carbon.identity.breach.detection.source;
 import java.util.Set;
 
 /**
- * One consistent view of the operator's file: the digests it yielded, paired with the algorithm they were taken
- * with.
+ * The digests loaded from the file, paired with the algorithm they were taken with.
  * <p>
- * The two travel together because a lookup needs both, and a reload builds a whole new snapshot before swapping
- * the reference - so an evaluation in flight can never hash a candidate with one algorithm and compare it
- * against digests taken with another.
+ * The two travel together so that a reload cannot leave an evaluation hashing with one algorithm and matching
+ * against digests taken with another. A reload builds a new snapshot before swapping the reference.
  */
 final class BlocklistSnapshot {
 

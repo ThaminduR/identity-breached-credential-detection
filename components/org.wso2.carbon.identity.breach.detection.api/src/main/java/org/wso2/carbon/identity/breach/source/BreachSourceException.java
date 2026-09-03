@@ -19,12 +19,10 @@
 package org.wso2.carbon.identity.breach.source;
 
 /**
- * Thrown by a source that could not reach a verdict.
+ * Thrown by a source that could not reach a verdict. Treated exactly as a returned
+ * {@link Outcome#UNAVAILABLE}: contained to that source and resolved by its failure action.
  * <p>
- * The engine treats this identically to a returned {@link Outcome#UNAVAILABLE}: contained to the source that
- * raised it, resolved by that source's failure policy, and never allowed to fail the other sources. The
- * message must carry no part of the candidate password and no source credential, including in the cause
- * chain.
+ * The message must carry no part of the credential, including in the cause chain.
  */
 public class BreachSourceException extends Exception {
 

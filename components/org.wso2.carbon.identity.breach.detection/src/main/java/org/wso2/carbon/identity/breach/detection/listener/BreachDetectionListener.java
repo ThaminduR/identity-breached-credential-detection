@@ -46,14 +46,10 @@ import java.util.Map;
 /**
  * The single interception point.
  * <p>
- * Every path that sets a password converges on {@code AbstractUserStoreManager}, which drives an ordered
- * listener chain before writing to the store. Sitting in that chain gives uniform coverage for free: portals,
- * management APIs, recovery and invitation acceptance all pass through it, and so does any path added later,
- * including one against a secondary user store.
+ * Every password-setting path calls {@code AbstractUserStoreManager}, which runs an ordered listener chain
+ * before writing. Intercepting there covers paths added later, including against a secondary user store.
  * <p>
- * Order 420 places this after composition rules at 3 - so a password failing length or character class never
- * reaches a breach source - and before the service extension at 10000, so in-product policy resolves before any
- * customer extension runs.
+ * Order 420 is after input validation at 3 and before the service extension at 10000.
  */
 public class BreachDetectionListener extends AbstractIdentityUserOperationEventListener {
 
@@ -162,9 +158,8 @@ public class BreachDetectionListener extends AbstractIdentityUserOperationEventL
     }
 
     /**
-     * A policy decision is a client error carrying its reason - never a server fault, which is
-     * indistinguishable from an outage and stops portals rendering the cause. The policy violation in the cause
-     * chain is what the recovery and self-registration paths recognise.
+     * A client error carrying its reason, not a server fault. The wrapped {@code PolicyViolationException} is
+     * what the recovery and self-registration paths recognise.
      */
     private UserStoreClientException policyRejection(String errorCode, String messageKey, String fallback) {
 

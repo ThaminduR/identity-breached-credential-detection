@@ -35,10 +35,8 @@ import java.util.Set;
 /**
  * Builds a {@link BlocklistSnapshot} from the operator's file.
  * <p>
- * The file is taken as it is: entries already hashed are read as digests, entries in plaintext are hashed on the
- * way in. Either way the result is one set of digests, and a lookup is one set membership test. There is no
- * ordering requirement, no storage regime to pick, and nothing an entry can say that changes what the loader
- * does - a line is a password or a digest, never a directive, a path, or markup.
+ * Hashed entries are read as digests, plaintext entries are hashed on the way in, and both produce one set of
+ * digests. A line is treated as data: it is a password or a digest, never a directive or a path.
  */
 class BlocklistLoader {
 
@@ -114,9 +112,8 @@ class BlocklistLoader {
     }
 
     /**
-     * An already-hashed entry is read as it stands - its algorithm was fixed when the list was dumped and is
-     * not ours to change. A plaintext entry is hashed here, so the operator's file is the only place those
-     * passwords exist in readable form and a heap dump never carries a list of them.
+     * A hashed entry is read as it stands, because its algorithm was fixed when the list was dumped. A
+     * plaintext entry is hashed here, so no readable password reaches the heap.
      */
     private static String toDigest(String content, BlocklistFormat format) {
 
@@ -145,9 +142,8 @@ class BlocklistLoader {
     }
 
     /**
-     * Hash a file entry through the same code that hashes a candidate password, so the two cannot drift. That
-     * both sides normalize identically - Unicode NFC, UTF-8, no case folding, no trimming - is the invariant
-     * the whole lookup rests on; anything else would refuse credentials the operator never listed.
+     * Hashes a file entry through the same code as a candidate password, so load and lookup cannot normalize
+     * differently.
      */
     static String digestOf(String value, String algorithm) {
 

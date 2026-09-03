@@ -21,10 +21,8 @@ package org.wso2.carbon.identity.breach.source;
 /**
  * What a source wants done with a password it could not check.
  * <p>
- * Each source answers this for itself, per organization, because the right answer differs by source. An
- * offline list that fails to load is a broken file an operator can fix in minutes, so refusing costs little.
- * A hosted corpus that cannot be reached is somebody else's outage, and refusing would let them stop every
- * password change in the deployment.
+ * Each source answers per organization, because the right answer differs. Refusing on a broken local file
+ * costs little. Refusing on a third party's outage stops every password change in the deployment.
  */
 public enum FailureAction {
 

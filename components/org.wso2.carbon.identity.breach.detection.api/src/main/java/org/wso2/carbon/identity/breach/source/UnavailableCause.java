@@ -19,11 +19,8 @@
 package org.wso2.carbon.identity.breach.source;
 
 /**
- * Why a source returned {@link Outcome#UNAVAILABLE}.
- * <p>
- * These are distinguished rather than collapsed because the operator response differs entirely: an exhausted
- * quota is a billing action, a transport failure is a network one, and a source named in policy with no bundle
- * behind it is a deployment one.
+ * Why a source returned {@link Outcome#UNAVAILABLE}. Distinguished because the operator response differs:
+ * an exhausted quota is a billing action, a transport failure is a network one.
  */
 public enum UnavailableCause {
 

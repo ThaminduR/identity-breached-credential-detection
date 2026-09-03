@@ -31,14 +31,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
- * What is bound right now.
+ * What is bound right now. The engine holds no reference to any concrete source.
  * <p>
- * The engine holds no reference to any concrete source: it tracks whatever registers itself. Removing a
- * connector JAR unbinds one service and changes nothing else.
- * <p>
- * Because the set is dynamic, the registry is worth observing in its own right - the bound ids and their
- * declared priorities are logged on startup and on every bind and unbind, so an operator can answer "is the
- * connector actually loaded" without inspecting a directory.
+ * The bound set is logged on every bind and unbind, so an operator can tell whether a connector loaded
+ * without inspecting a directory.
  */
 public class SourceRegistry {
 

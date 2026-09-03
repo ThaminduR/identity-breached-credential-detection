@@ -47,10 +47,8 @@ import java.util.Map;
 /**
  * Starts the capability and publishes its services.
  * <p>
- * The reference to {@link BreachSource} is dynamic and multiple-cardinality, which is the whole point of the
- * core/connector split: a connector JAR dropped into {@code dropins} registers itself and is picked up with no
- * configuration edit and no restart - a service event rather than a file change - and removing it unbinds one
- * service and changes nothing else.
+ * The {@link BreachSource} reference is dynamic and multiple-cardinality, so a connector added to
+ * {@code dropins} binds without a restart and removing it unbinds one service.
  */
 @Component(
         name = "identity.breach.detection.component",
@@ -109,12 +107,8 @@ public class BreachDetectionServiceComponent {
     }
 
     /**
-     * Hand a source the settings it declared, resolved from operator configuration.
-     * <p>
-     * The only place a source's configuration is assembled. A connector reads nothing itself and receives no
-     * filesystem or vault access of its own, which is what makes the {@code secret} flag on a property
-     * descriptor enforceable. Contained: a connector that cannot be configured must not stop the others
-     * starting.
+     * Hands a source the settings it declared. The only place a source's configuration is assembled, and
+     * contained so that one connector cannot stop the others starting.
      */
     private static void configure(BreachSource source) {
 

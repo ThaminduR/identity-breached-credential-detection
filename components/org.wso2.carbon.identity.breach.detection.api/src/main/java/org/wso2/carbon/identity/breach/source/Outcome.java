@@ -21,10 +21,9 @@ package org.wso2.carbon.identity.breach.source;
 /**
  * What a source concluded about a candidate password.
  * <p>
- * {@link #UNAVAILABLE} is not {@link #NOT_FOUND}. A source that cannot reach its corpus, times out, exhausts a
- * quota, or fails to parse a response returns {@code UNAVAILABLE}. No source is permitted to invent
- * {@code NOT_FOUND}: collapsing the two is what makes a breach check silently stop enforcing while still
- * reporting itself as enabled.
+ * {@link #UNAVAILABLE} is not {@link #NOT_FOUND}. A source that could not reach its corpus returns
+ * {@code UNAVAILABLE}. Collapsing the two lets enforcement stop silently while the source still reports
+ * itself enabled.
  */
 public enum Outcome {
 

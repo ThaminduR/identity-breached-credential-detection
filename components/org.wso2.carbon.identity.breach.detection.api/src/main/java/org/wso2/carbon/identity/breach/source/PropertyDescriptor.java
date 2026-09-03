@@ -23,10 +23,8 @@ import java.util.Optional;
 /**
  * One deployment setting a source needs.
  * <p>
- * The core does not know a connector's settings, so the connector declares them and the core resolves the
- * values - the connector reads no file and holds no vault handle of its own. The {@code secret} flag is what
- * makes that enforceable: a secret is resolved through the platform secret store and is never reachable as a
- * plain value.
+ * The connector declares its settings and the core resolves the values, so the connector reads no file and
+ * holds no vault handle. That is what makes the {@code secret} flag enforceable by the core.
  */
 public final class PropertyDescriptor {
 

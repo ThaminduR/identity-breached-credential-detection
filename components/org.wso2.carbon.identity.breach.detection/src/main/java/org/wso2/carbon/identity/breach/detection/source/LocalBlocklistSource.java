@@ -37,14 +37,10 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * The operator's own list of forbidden passwords, answered without touching the network.
+ * The operator's own list of forbidden passwords, answered without a network call.
  * <p>
- * The only source that ships in the core, and the only one that is not a connector. It earns that on two
- * grounds: it crosses no boundary, so there is no third-party API to track, and it is what makes the capability
- * work at all in a network-isolated deployment. It is also the floor that keeps enforcing when every remote
- * source is down - which is what makes {@code allow} a defensible default failure policy rather than a shrug.
- * <p>
- * It registers through the same registry as any connector and gets no privileged path from the engine.
+ * The only source that ships in the core. It crosses no boundary, so it works in a network-isolated
+ * deployment. It registers through the same registry as any connector and gets no privileged path.
  */
 public class LocalBlocklistSource implements BreachSource {
 
@@ -168,12 +164,8 @@ public class LocalBlocklistSource implements BreachSource {
     }
 
     /**
-     * Rebuild the index from the configured file.
-     * <p>
-     * The new index is built in full before the reference is swapped, so an evaluation in flight always sees one
-     * consistent view. A file that cannot be parsed leaves the previously loaded list in effect and reports the
-     * failure rather than quietly emptying the list.
-     *
+     * Rebuilds the index. The new one is built in full before the reference is swapped. A file that cannot be
+     * parsed leaves the previous list in effect rather than emptying it.
      */
     private void reload() {
 

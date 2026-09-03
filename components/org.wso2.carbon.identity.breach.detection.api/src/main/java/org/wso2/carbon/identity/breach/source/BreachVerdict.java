@@ -21,10 +21,9 @@ package org.wso2.carbon.identity.breach.source;
 import java.util.Optional;
 
 /**
- * What one source concluded, and - when it could not conclude anything - why.
+ * What one source concluded, and why when it could not conclude anything.
  * <p>
- * Deliberately carries no occurrence count. A count is never shown to an end user - it invites treating a
- * smaller number as safer and offers nothing actionable - and nothing else needs one.
+ * Carries no occurrence count. A count is never shown to a user, and nothing else needs one.
  */
 public final class BreachVerdict {
 

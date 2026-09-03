@@ -21,11 +21,10 @@ package org.wso2.carbon.identity.breach.source;
 import java.util.Optional;
 
 /**
- * The resolved deployment settings for one source, handed to it by the core.
+ * The resolved deployment settings for one source.
  * <p>
- * A source never reads {@code deployment.toml} and never touches the vault: it declares what it needs through
- * {@link BreachSource#getProperties()} and receives the values here. That is what keeps the {@code secret}
- * flag on a {@link PropertyDescriptor} enforceable rather than advisory.
+ * A source declares what it needs through {@link BreachSource#getProperties()} and receives the values here.
+ * It never reads configuration files and never touches the vault.
  */
 public interface SourceConfiguration {
 
@@ -57,10 +56,7 @@ public interface SourceConfiguration {
     boolean getBoolean(String name, boolean defaultValue);
 
     /**
-     * Resolve a property declared as {@code secret} through the platform secret store.
-     * <p>
-     * The caller owns the returned array and must wipe it after use. Never render it, log it, or return it
-     * from an API.
+     * Resolve a property declared {@code secret}. The caller owns the array and must wipe it after use.
      *
      * @param name declared property name.
      * @return the secret, or empty when unset.
@@ -68,8 +64,8 @@ public interface SourceConfiguration {
     Optional<char[]> getSecret(String name);
 
     /**
-     * Resolve a property whose value is a filesystem path, confined to the permitted locations. A value that
-     * escapes them resolves to empty and is reported at load.
+     * Resolve a path, confined to the deployment and configuration directories. A path outside them resolves
+     * to empty and is logged.
      *
      * @param name declared property name.
      * @return the resolved absolute path, or empty.

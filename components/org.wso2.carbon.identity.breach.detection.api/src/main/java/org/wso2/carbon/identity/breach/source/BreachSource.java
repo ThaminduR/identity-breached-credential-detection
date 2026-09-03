@@ -23,12 +23,9 @@ import java.util.List;
 /**
  * A breach-intelligence source, published as an OSGi service.
  * <p>
- * Every method is abstract. A source decides its own enablement, its own failure action and its own
- * configuration, and those are the decisions an implementer must not inherit by accident.
- * <p>
- * Every source is called on a worker thread and bounded by the evaluation timeout, including one that answers
- * from memory. The hand-off costs microseconds against a credential write that takes milliseconds, and it
- * means a source that hangs cannot hang the write.
+ * Every method is abstract, so enablement, failure action and configuration cannot be inherited by accident.
+ * Every source is called on a worker thread and bounded by the evaluation timeout, so one that hangs cannot
+ * hang the credential write.
  */
 public interface BreachSource {
 

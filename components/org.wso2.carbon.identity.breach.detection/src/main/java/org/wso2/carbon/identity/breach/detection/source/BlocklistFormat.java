@@ -21,15 +21,10 @@ package org.wso2.carbon.identity.breach.detection.source;
 import java.util.Locale;
 
 /**
- * How the operator's file is written.
+ * How the operator's file is written. Plaintext is hashed at load, so the in-memory form is always digests.
  * <p>
- * Hashed entries are canonical. Plaintext is accepted and hashed at load, so the in-memory representation is
- * uniform and a plaintext corpus never persists in that form inside the product.
- * <p>
- * There is deliberately no {@code auto} member and no fallback. The file dictates the algorithm - a list of
- * already-dumped hashes can only be compared on the algorithm it was dumped with - and a wrong guess does not
- * fail, it simply stops matching. Declaring it is the operator's call, and an undeclared or unrecognised value
- * leaves the source not configured rather than quietly picking one.
+ * No {@code auto} member and no fallback. The file determines the algorithm, and a wrong guess does not fail,
+ * it stops matching. An undeclared or unrecognised value leaves the source not configured.
  */
 public enum BlocklistFormat {
 

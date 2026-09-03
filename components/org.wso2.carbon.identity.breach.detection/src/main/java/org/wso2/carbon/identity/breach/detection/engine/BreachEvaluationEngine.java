@@ -40,12 +40,11 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Orders the sources a tenant enabled, bounds each call, short-circuits on the first match, contains failures
- * to the source that caused them, and resolves the whole thing into one decision.
+ * Orders the sources a tenant enabled, bounds each call, stops at the first match, contains failures to the
+ * source that caused them, and resolves the verdicts into one decision.
  * <p>
- * It knows nothing about any concrete source. Ordering comes from the priority each source declares, so an
- * in-process offline list is consulted before a network round trip - which means the passwords an operator most
- * wants blocked never leave the deployment and never consume third-party quota.
+ * Knows nothing about any concrete source. Ordering comes from the priority each source declares, so a local
+ * source runs before a network round trip and a match there costs no request.
  */
 public class BreachEvaluationEngine {
 
@@ -75,10 +74,8 @@ public class BreachEvaluationEngine {
     }
 
     /**
-     * Evaluate a candidate against every source this organization enabled.
-     * <p>
-     * Clears the credential before returning, unless a source timed out and may still be reading it. The
-     * caller does not need to clear it again.
+     * Evaluate a candidate against every source this organization enabled. Clears the credential before
+     * returning, unless a source timed out and may still be reading it.
      *
      * @param context the candidate and the organization it is being set in.
      * @return what the caller should do.
@@ -122,10 +119,8 @@ public class BreachEvaluationEngine {
     }
 
     /**
-     * The sources this organization wants consulted, cheapest first.
-     * <p>
-     * Only bound sources can appear, because the only thing that can enable one is the source itself. That
-     * removes an entire failure mode: there is no way to name a source the deployment does not have.
+     * The sources this organization wants consulted, cheapest first. Only bound sources can appear, because
+     * only a source can enable itself.
      */
     private List<BreachSource> plan(String tenantDomain) {
 

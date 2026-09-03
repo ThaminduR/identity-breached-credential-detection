@@ -27,11 +27,10 @@ import java.text.Normalizer;
 import java.util.Arrays;
 
 /**
- * The candidate password, held as a {@code char[]} rather than a {@code String} so it can be cleared and so it
- * never lands in the string pool or a heap dump for longer than the evaluation takes.
+ * The candidate password, held as a {@code char[]} so it can be cleared and never reaches the string pool.
  * <p>
- * It has no meaningful {@code toString}, and must never enter a log statement, an exception message, a metric
- * label, or a cache key. The engine clears it after the last source returns; a source must not retain it.
+ * Must never enter a log statement, an exception message or a cache key. The engine clears it once the last
+ * source returns. A source must not retain it.
  */
 public final class Credential {
 
@@ -61,11 +60,8 @@ public final class Credential {
     }
 
     /**
-     * The canonical byte form: Unicode NFC, encoded UTF-8. No case folding and no trimming - passwords are
-     * case- and whitespace-significant, and folding them would refuse credentials nobody listed.
-     * <p>
-     * Deliberately not exposed. It hands out the credential in a readable form, and the one thing anybody needs
-     * it for - a digest - is {@link #digestHex(String)}.
+     * Canonical bytes: Unicode NFC, UTF-8, no case folding and no trimming. Passwords are case- and
+     * whitespace-significant. Private, because the only use for it is {@link #digestHex(String)}.
      */
     private byte[] canonicalBytes() {
 
@@ -84,10 +80,9 @@ public final class Credential {
     }
 
     /**
-     * Digest of the canonical byte form, uppercase hex. This is what a source matches on; the credential
-     * itself never leaves the process.
+     * Digest of the canonical bytes, uppercase hex. What a source matches on.
      *
-     * @param algorithm a {@link MessageDigest} algorithm name, for example {@code SHA-1} or {@code SHA-256}.
+     * @param algorithm a {@link MessageDigest} algorithm name, for example {@code SHA-1}.
      * @return uppercase hex digest.
      * @throws IllegalArgumentException if the algorithm is not available.
      */
