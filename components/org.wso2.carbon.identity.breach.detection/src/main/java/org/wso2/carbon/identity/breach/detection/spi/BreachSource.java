@@ -16,14 +16,18 @@
  * under the License.
  */
 
-package org.wso2.carbon.identity.breach.detection;
+package org.wso2.carbon.identity.breach.detection.spi;
+
+import org.wso2.carbon.identity.breach.detection.model.Credential;
+import org.wso2.carbon.identity.breach.detection.model.Decision;
 
 /**
  * A breach intelligence source, published as an OSGi service.
  * <p>
- * Every method is abstract. A source states its own enablement, failure behaviour and configuration rather
- * than inheriting a default. The engine calls every source on a worker thread and applies the evaluation
- * timeout, so a source that blocks does not block the password write.
+ * A source owns everything about how it reaches its data. It sets its own timeouts, retries and failure
+ * handling, and it decides what happens to a password it could not check. The engine calls
+ * {@link #check} on the calling thread and does not bound it, so a source that makes a network request must
+ * apply its own timeout.
  */
 public interface BreachSource {
 
@@ -45,9 +49,8 @@ public interface BreachSource {
     void configure(SourceConfiguration configuration);
 
     /**
-     * Whether this organization wants the source consulted, and whether the source has enough
-     * configuration to answer. A source that cannot answer returns false. There is no separate check for
-     * whether a source is configured.
+     * Whether this organization wants the source consulted, and whether the source has enough configuration
+     * to answer. A source that cannot answer returns false.
      *
      * @param tenantDomain the organization asking.
      * @return true if the source should be consulted.
@@ -55,21 +58,17 @@ public interface BreachSource {
     boolean isEnabled(String tenantDomain);
 
     /**
-     * @param tenantDomain the organization asking.
-     * @return true to refuse a password this source could not check, false to let it through.
-     */
-    boolean refusesWhenUnavailable(String tenantDomain);
-
-    /**
-     * Evaluate the candidate password.
+     * Check the candidate password and decide the result.
      * <p>
-     * Return {@link Outcome#UNAVAILABLE} for any result that is not a positive determination, and log the
-     * reason. Do not return {@link Outcome#NOT_FOUND} when a call fails. Do not log, cache or transmit the
-     * credential, and do not retain it after this method returns.
+     * Return {@link Decision#REFUSE_BREACHED} when the password is in this source's data. Return
+     * {@link Decision#ACCEPT} when it is not. When the source cannot reach its data, log the reason and
+     * return either {@link Decision#REFUSE_UNVERIFIED} or {@link Decision#ACCEPT} according to the failure
+     * policy configured for the source. Do not log, cache or transmit the credential, and do not retain it
+     * after this method returns.
      *
-     * @param credential   the candidate password. Do not retain it past this call.
+     * @param credential   the candidate password.
      * @param tenantDomain the organization the password is being set in.
-     * @return what this source concluded.
+     * @return what the server should do with this password.
      */
-    Outcome evaluate(Credential credential, String tenantDomain);
+    Decision check(Credential credential, String tenantDomain);
 }

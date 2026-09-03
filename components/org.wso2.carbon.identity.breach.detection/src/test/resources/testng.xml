@@ -2,7 +2,7 @@
 <suite name="breach-detection">
     <test name="breach-detection-tests">
         <packages>
-            <package name="org.wso2.carbon.identity.breach.detection"/>
+            <package name="org.wso2.carbon.identity.breach.detection.model"/>
             <package name="org.wso2.carbon.identity.breach.detection.engine"/>
             <package name="org.wso2.carbon.identity.breach.detection.source"/>
             <package name="org.wso2.carbon.identity.breach.detection.config"/>

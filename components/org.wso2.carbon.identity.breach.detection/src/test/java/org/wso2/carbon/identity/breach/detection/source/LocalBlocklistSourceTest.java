@@ -19,8 +19,8 @@
 package org.wso2.carbon.identity.breach.detection.source;
 
 import org.testng.annotations.Test;
-import org.wso2.carbon.identity.breach.detection.Credential;
-import org.wso2.carbon.identity.breach.detection.Outcome;
+import org.wso2.carbon.identity.breach.detection.model.Credential;
+import org.wso2.carbon.identity.breach.detection.model.Decision;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -54,8 +54,8 @@ public class LocalBlocklistSourceTest {
 
         LocalBlocklistSource source = configured(write(Arrays.asList("Password@1", "Qwerty@123")), "plaintext");
 
-        assertEquals(source.evaluate(candidate("Password@1"), TENANT), Outcome.FOUND);
-        assertEquals(source.evaluate(candidate("Zx9q!Kt7#Lm2vRb4"), TENANT), Outcome.NOT_FOUND);
+        assertEquals(source.check(candidate("Password@1"), TENANT), Decision.REFUSE_BREACHED);
+        assertEquals(source.check(candidate("Zx9q!Kt7#Lm2vRb4"), TENANT), Decision.ACCEPT);
         source.shutdown();
     }
 
@@ -69,19 +69,19 @@ public class LocalBlocklistSourceTest {
         String digest = BlocklistLoader.digestOf("Password@1", "SHA-1");
         LocalBlocklistSource source = configured(write(Collections.singletonList(digest)), "sha1");
 
-        assertEquals(source.evaluate(candidate("Password@1"), TENANT), Outcome.FOUND);
-        assertEquals(source.evaluate(candidate("Password@2"), TENANT), Outcome.NOT_FOUND);
+        assertEquals(source.check(candidate("Password@1"), TENANT), Decision.REFUSE_BREACHED);
+        assertEquals(source.check(candidate("Password@2"), TENANT), Decision.ACCEPT);
         source.shutdown();
     }
 
     @Test
-    public void withNoFileConfiguredItIsNotConsultedAndNeverReportsAPasswordClean() {
+    public void withNoFileConfiguredTheSourceIsNotEnabled() {
 
         LocalBlocklistSource source = new LocalBlocklistSource();
         source.configure(new MapSourceConfiguration());
 
         assertFalse(source.isEnabled(TENANT));
-        assertEquals(source.evaluate(candidate("Password@1"), TENANT), Outcome.UNAVAILABLE);
+        assertEquals(source.check(candidate("Password@1"), TENANT), Decision.ACCEPT);
         source.shutdown();
     }
 
@@ -112,7 +112,7 @@ public class LocalBlocklistSourceTest {
                 .set(LocalBlocklistSource.PROPERTY_FORMAT, "plaintext"));
 
         assertFalse(source.isEnabled(TENANT));
-        assertEquals(source.evaluate(candidate("Password@1"), TENANT), Outcome.UNAVAILABLE);
+        assertEquals(source.check(candidate("Password@1"), TENANT), Decision.ACCEPT);
         source.shutdown();
     }
 
@@ -139,7 +139,7 @@ public class LocalBlocklistSourceTest {
                 .set(LocalBlocklistSource.PROPERTY_PATH, file.toString())
                 .set(LocalBlocklistSource.PROPERTY_FORMAT, "sha1"));
 
-        assertEquals(source.evaluate(candidate("Password@1"), TENANT), Outcome.FOUND,
+        assertEquals(source.check(candidate("Password@1"), TENANT), Decision.REFUSE_BREACHED,
                 "The previous list must stay in effect rather than emptying itself.");
         source.shutdown();
     }

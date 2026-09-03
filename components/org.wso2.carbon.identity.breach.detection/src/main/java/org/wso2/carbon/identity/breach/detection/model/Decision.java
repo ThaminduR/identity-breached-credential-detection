@@ -16,7 +16,7 @@
  * under the License.
  */
 
-package org.wso2.carbon.identity.breach.detection.engine;
+package org.wso2.carbon.identity.breach.detection.model;
 
 /**
  * What the engine concluded the caller should do.

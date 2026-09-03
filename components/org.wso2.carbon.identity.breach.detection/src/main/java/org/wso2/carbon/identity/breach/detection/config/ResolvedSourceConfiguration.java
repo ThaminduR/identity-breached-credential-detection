@@ -20,7 +20,7 @@ package org.wso2.carbon.identity.breach.detection.config;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.wso2.carbon.identity.breach.detection.SourceConfiguration;
+import org.wso2.carbon.identity.breach.detection.spi.SourceConfiguration;
 import org.wso2.carbon.identity.breach.detection.util.BreachDetectionUtils;
 import org.wso2.carbon.utils.CarbonUtils;
 

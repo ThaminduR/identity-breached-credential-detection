@@ -48,11 +48,7 @@ public class BreachDetectionConstants {
     public static final String LOCAL_LIST_SOURCE_ID = "localList";
 
     /** Operator settings, read from identity.xml. */
-    public static final String CONFIG_SOURCE_TIMEOUT_MS = "evaluation_timeout_ms";
-    public static final int DEFAULT_SOURCE_TIMEOUT_MS = 1500;
     public static final String CONFIG_EXEMPT_BULK = "exempt_bulk_operations";
-    public static final String CONFIG_WORKER_THREADS = "worker_threads";
-    public static final int DEFAULT_WORKER_THREADS = 20;
 
     /**
      * Error codes. A policy rejection is reported as a client error carrying the reason. It is not reported

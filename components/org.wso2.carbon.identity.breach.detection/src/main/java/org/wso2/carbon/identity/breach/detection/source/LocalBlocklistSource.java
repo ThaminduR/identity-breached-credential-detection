@@ -21,10 +21,10 @@ package org.wso2.carbon.identity.breach.detection.source;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.breach.detection.constants.BreachDetectionConstants;
-import org.wso2.carbon.identity.breach.detection.BreachSource;
-import org.wso2.carbon.identity.breach.detection.Credential;
-import org.wso2.carbon.identity.breach.detection.Outcome;
-import org.wso2.carbon.identity.breach.detection.SourceConfiguration;
+import org.wso2.carbon.identity.breach.detection.spi.BreachSource;
+import org.wso2.carbon.identity.breach.detection.model.Credential;
+import org.wso2.carbon.identity.breach.detection.model.Decision;
+import org.wso2.carbon.identity.breach.detection.spi.SourceConfiguration;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -127,25 +127,19 @@ public class LocalBlocklistSource implements BreachSource {
 
 
     /**
-     * A list that failed to load reports itself as disabled, so the engine does not consult it and this
-     * method is not reached. See the open question recorded against that behaviour.
+     * A list that is not loaded accepts rather than refuses. {@link #isEnabled} already reports false in
+     * that case, so the engine does not reach this method. See the open question recorded against that
+     * behaviour.
      */
     @Override
-    public boolean refusesWhenUnavailable(String tenantDomain) {
-
-        return false;
-    }
-
-    @Override
-    public Outcome evaluate(Credential credential, String tenantDomain) {
+    public Decision check(Credential credential, String tenantDomain) {
 
         BlocklistSnapshot current = snapshot.get();
         if (current == null) {
-            // Not reached through the engine, because isEnabled reports false when there is no snapshot.
-            return Outcome.UNAVAILABLE;
+            return Decision.ACCEPT;
         }
         String digest = credential.digestHex(current.getFormat().getDigestAlgorithm());
-        return current.contains(digest) ? Outcome.FOUND : Outcome.NOT_FOUND;
+        return current.contains(digest) ? Decision.REFUSE_BREACHED : Decision.ACCEPT;
     }
 
     /**

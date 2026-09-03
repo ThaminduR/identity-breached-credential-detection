@@ -35,7 +35,7 @@ import org.wso2.carbon.identity.breach.detection.engine.BreachEvaluationEngine;
 import org.wso2.carbon.identity.breach.detection.engine.SourceRegistry;
 import org.wso2.carbon.identity.breach.detection.listener.BreachDetectionListener;
 import org.wso2.carbon.identity.breach.detection.source.LocalBlocklistSource;
-import org.wso2.carbon.identity.breach.detection.BreachSource;
+import org.wso2.carbon.identity.breach.detection.spi.BreachSource;
 import org.wso2.carbon.identity.breach.detection.util.BreachDetectionUtils;
 import org.wso2.carbon.identity.core.util.IdentityCoreInitializedEvent;
 import org.wso2.carbon.user.core.listener.UserOperationEventListener;
@@ -69,14 +69,13 @@ public class BreachDetectionServiceComponent {
 
         BreachDetectionConfig config = BreachDetectionConfig.reload();
 
-        holder.setEvaluationEngine(new BreachEvaluationEngine(registry, config.getWorkerThreads(),
-                config.getEvaluationTimeoutMs()));
+        holder.setEvaluationEngine(new BreachEvaluationEngine(registry));
 
         LocalBlocklistSource localBlocklistSource = new LocalBlocklistSource();
         holder.setLocalBlocklistSource(localBlocklistSource);
 
         // The local list registers as an OSGi service in the same way a connector does, so the bind
-        // callback below configures it as well. The engine has no separate path for it.
+        // callback below configures it too.
         registrations.add(bundleContext.registerService(BreachSource.class, localBlocklistSource, null));
         registrations.add(bundleContext.registerService(UserOperationEventListener.class,
                 new BreachDetectionListener(), null));
@@ -89,7 +88,6 @@ public class BreachDetectionServiceComponent {
         LOG.info("Breached password detection started. Deployment switch: "
                 + (config.isEnabledAtDeployment() ? "on" : "off")
                 + ", listener order: " + config.getListenerOrder()
-                + ", per-source timeout: " + config.getEvaluationTimeoutMs() + " ms"
                 + ", bound sources: " + registry.describe() + ".");
 
         List<String> orphaned = new ArrayList<>();
@@ -99,8 +97,7 @@ public class BreachDetectionServiceComponent {
             }
         }
         if (!orphaned.isEmpty()) {
-            // Reported because it usually means a connector JAR is missing. Correcting it is a deployment
-            // step, not a configuration change.
+            // Usually a missing connector JAR, which is a deployment step rather than a config change.
             LOG.warn("Breach detection configuration names sources that are not installed: " + orphaned
                     + ". Add the connector JARs to repository/components/dropins, or remove the configuration.");
         }
@@ -135,9 +132,6 @@ public class BreachDetectionServiceComponent {
         registrations.clear();
 
         BreachDetectionDataHolder holder = BreachDetectionDataHolder.getInstance();
-        if (holder.getEvaluationEngine() != null) {
-            holder.getEvaluationEngine().shutdown();
-        }
         if (holder.getLocalBlocklistSource() != null) {
             holder.getLocalBlocklistSource().shutdown();
         }
@@ -175,7 +169,7 @@ public class BreachDetectionServiceComponent {
     )
     protected void setIdentityCoreInitializedEventService(IdentityCoreInitializedEvent event) {
 
-        // Nothing to hold. The reference exists only to order start-up.
+        // The reference exists only to order start-up.
     }
 
     protected void unsetIdentityCoreInitializedEventService(IdentityCoreInitializedEvent event) {

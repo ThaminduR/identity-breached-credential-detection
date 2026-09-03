@@ -16,7 +16,7 @@
  * under the License.
  */
 
-package org.wso2.carbon.identity.breach.detection;
+package org.wso2.carbon.identity.breach.detection.model;
 
 import org.testng.annotations.Test;
 

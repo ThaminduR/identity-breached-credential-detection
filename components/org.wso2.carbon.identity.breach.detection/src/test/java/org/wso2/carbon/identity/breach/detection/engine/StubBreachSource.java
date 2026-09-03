@@ -18,10 +18,10 @@
 
 package org.wso2.carbon.identity.breach.detection.engine;
 
-import org.wso2.carbon.identity.breach.detection.Credential;
-import org.wso2.carbon.identity.breach.detection.BreachSource;
-import org.wso2.carbon.identity.breach.detection.Outcome;
-import org.wso2.carbon.identity.breach.detection.SourceConfiguration;
+import org.wso2.carbon.identity.breach.detection.model.Credential;
+import org.wso2.carbon.identity.breach.detection.model.Decision;
+import org.wso2.carbon.identity.breach.detection.spi.BreachSource;
+import org.wso2.carbon.identity.breach.detection.spi.SourceConfiguration;
 
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
@@ -33,37 +33,28 @@ class StubBreachSource implements BreachSource {
 
     private final String id;
     private final int priority;
-    private final Function<Credential, Outcome> answer;
+    private final Function<Credential, Decision> answer;
     private final AtomicInteger calls = new AtomicInteger();
 
     private boolean enabled = true;
-    private boolean refuses;
     private RuntimeException enabledFailure;
     private RuntimeException failure;
-    private long delayMillis;
 
-    private StubBreachSource(String id, int priority, Function<Credential, Outcome> answer) {
+    private StubBreachSource(String id, int priority, Function<Credential, Decision> answer) {
 
         this.id = id;
         this.priority = priority;
         this.answer = answer;
     }
 
-    static StubBreachSource source(String id, int priority, Function<Credential, Outcome> answer) {
+    static StubBreachSource source(String id, int priority, Function<Credential, Decision> answer) {
 
         return new StubBreachSource(id, priority, answer);
     }
 
-
     StubBreachSource disabled() {
 
         this.enabled = false;
-        return this;
-    }
-
-    StubBreachSource refusing() {
-
-        this.refuses = true;
         return this;
     }
 
@@ -79,12 +70,6 @@ class StubBreachSource implements BreachSource {
         return this;
     }
 
-    StubBreachSource slow(long delayMillis) {
-
-        this.delayMillis = delayMillis;
-        return this;
-    }
-
     int getCalls() {
 
         return calls.get();
@@ -97,17 +82,15 @@ class StubBreachSource implements BreachSource {
     }
 
     @Override
-    public void configure(SourceConfiguration configuration) {
-
-    }
-
-    @Override
     public int getPriority() {
 
         return priority;
     }
 
+    @Override
+    public void configure(SourceConfiguration configuration) {
 
+    }
 
     @Override
     public boolean isEnabled(String tenantDomain) {
@@ -119,27 +102,9 @@ class StubBreachSource implements BreachSource {
     }
 
     @Override
-    public boolean refusesWhenUnavailable(String tenantDomain) {
-
-        return refuses;
-    }
-
-    @Override
-    public Outcome evaluate(Credential credential, String tenantDomain) {
+    public Decision check(Credential credential, String tenantDomain) {
 
         calls.incrementAndGet();
-        if (delayMillis > 0) {
-            // Deliberately ignores interruption: a connector that does not cooperate with cancellation is
-            // exactly the case the engine has to survive without corrupting a call in flight.
-            long until = System.currentTimeMillis() + delayMillis;
-            while (System.currentTimeMillis() < until) {
-                try {
-                    Thread.sleep(10);
-                } catch (InterruptedException ignored) {
-                    // Swallowed on purpose.
-                }
-            }
-        }
         if (failure != null) {
             throw failure;
         }

@@ -142,12 +142,6 @@ public class BreachDetectionConfig {
         return sourceProperties.get(normalizedSourceId);
     }
 
-    public int getEvaluationTimeoutMs() {
-
-        return BreachDetectionUtils.parseInt(globalProperties.get(BreachDetectionConstants.CONFIG_SOURCE_TIMEOUT_MS),
-                BreachDetectionConstants.DEFAULT_SOURCE_TIMEOUT_MS);
-    }
-
     /**
      * Bulk imports and migration-time writes can be exempted, so that a migration does not make one network
      * call per row or consume third-party quota for data that is already in the store.
@@ -158,12 +152,6 @@ public class BreachDetectionConfig {
 
         return BreachDetectionUtils.parseBoolean(globalProperties.get(BreachDetectionConstants.CONFIG_EXEMPT_BULK),
                 false);
-    }
-
-    public int getWorkerThreads() {
-
-        return BreachDetectionUtils.parseInt(globalProperties.get(BreachDetectionConstants.CONFIG_WORKER_THREADS),
-                BreachDetectionConstants.DEFAULT_WORKER_THREADS);
     }
 
     private void parse(Map<String, String> globals, Map<String, Map<String, String>> sources) {

@@ -133,16 +133,6 @@ Configured under `[breach_detection]`.
         <th>Description</th>
     </tr>
     <tr>
-        <td>evaluation_timeout_ms</td>
-        <td>[Optional] The time a single remote source is given to answer, in milliseconds. Offline sources are
-        called inline and are not bounded by this. <br> <b>Default:</b> <code>1500</code></td>
-    </tr>
-    <tr>
-        <td>worker_threads</td>
-        <td>[Optional] The size of the thread pool used for remote source calls. <br> <b>Default:</b>
-        <code>20</code></td>
-    </tr>
-    <tr>
         <td>exempt_bulk_operations</td>
         <td>[Optional] Skips evaluation for writes the server attributes to a bulk flow, such as a user import
         or a migration. Ordinary password changes are still evaluated. <br> <b>Default:</b>
@@ -205,7 +195,8 @@ them in the order of the priority each one declares.
     <tr>
         <td>Connector, for example Have I Been Pwned</td>
         <td>500</td>
-        <td>Remote. Bounded by <code>evaluation_timeout_ms</code> on a worker thread.</td>
+        <td>Remote. The connector applies its own read and connect timeouts, retries and circuit
+        breaker.</td>
     </tr>
 </table>
 
@@ -273,9 +264,10 @@ performed in the server.
 
 ## When a source cannot answer
 
-A source that cannot reach its corpus, times out, exhausts a quota, or cannot parse a response reports the
-password as **unavailable**, never as *not found*. Treating the two as equivalent is what allows a breach check
-to stop enforcing while still reporting itself as enabled.
+A source that cannot reach its corpus, times out, exhausts a quota, or cannot parse a response logs the
+reason and applies the failure policy configured for it. It never reports the password as checked and clean
+without a record, because that would let a breach check stop enforcing while still reporting itself as
+enabled.
 
 Each source decides what happens to a password it could not check, per organization.
 
@@ -456,8 +448,8 @@ Implement `BreachSource` and register it as an OSGi service from your bundle act
 bundleContext.registerService(BreachSource.class, new MyBreachSource(), null);
 ```
 
-Every method on the interface is abstract. Enablement, failure behaviour and configuration must each be
-stated by the source rather than inherited from a default.
+The contract is five methods. A source owns everything about how it reaches its data, including its
+timeouts, its retries, and what happens to a password it could not check.
 
 <table>
     <tr>
@@ -469,14 +461,9 @@ stated by the source rather than inherited from a default.
         <td>A stable id, lowercase and without spaces. Deployment configuration is namespaced on it.</td>
     </tr>
     <tr>
-        <td><code>getPropertyNames()</code></td>
-        <td>The deployment setting names this source reads. A configured key that is not listed is reported as
-        unrecognised at startup, so a typo does not silently leave the source on its defaults.</td>
-    </tr>
-    <tr>
         <td><code>getPriority()</code></td>
-        <td>A cost hint. The server calls sources in ascending order and stops at the first
-        <code>FOUND</code>.</td>
+        <td>The call order hint. The server calls sources in ascending order and stops at the first
+        refusal.</td>
     </tr>
     <tr>
         <td><code>configure(SourceConfiguration)</code></td>
@@ -486,23 +473,50 @@ stated by the source rather than inherited from a default.
     <tr>
         <td><code>isEnabled(tenantDomain)</code></td>
         <td>Whether the organization wants this source consulted, and whether it is configured well enough to
-        answer. A source that is not usable returns <code>false</code> here.</td>
+        answer. A source that cannot answer returns <code>false</code>.</td>
     </tr>
     <tr>
-        <td><code>refusesWhenUnavailable(tenantDomain)</code></td>
-        <td>Whether a password this source could not check is refused or allowed.</td>
-    </tr>
-    <tr>
-        <td><code>evaluate(credential, tenantDomain)</code></td>
-        <td><code>FOUND</code>, <code>NOT_FOUND</code>, or <code>UNAVAILABLE</code>.</td>
+        <td><code>check(credential, tenantDomain)</code></td>
+        <td>Returns <code>REFUSE_BREACHED</code>, <code>REFUSE_UNVERIFIED</code>, or
+        <code>ACCEPT</code>.</td>
     </tr>
 </table>
+
+### Deciding the result
+
+`check` returns a `Decision`, which is the same type the server acts on. There is no separate step where the
+server interprets a source's failure.
+
+<table>
+    <tr>
+        <th>Situation</th>
+        <th>Return</th>
+    </tr>
+    <tr>
+        <td>The password is in this source's data</td>
+        <td><code>REFUSE_BREACHED</code></td>
+    </tr>
+    <tr>
+        <td>The password is not in this source's data</td>
+        <td><code>ACCEPT</code></td>
+    </tr>
+    <tr>
+        <td>The source could not reach its data, and the organization configured it to refuse</td>
+        <td><code>REFUSE_UNVERIFIED</code></td>
+    </tr>
+    <tr>
+        <td>The source could not reach its data, and the organization configured it to allow</td>
+        <td><code>ACCEPT</code>, with the reason logged</td>
+    </tr>
+</table>
+
+The server calls the first source, and returns as soon as one returns something other than `ACCEPT`. A source
+that throws is logged and treated as `ACCEPT`, and the remaining sources still run.
 
 ### Reading configuration
 
 Settings reach the source through `configure(SourceConfiguration)`. The source reads no configuration file
-and resolves no secret alias itself. Each accessor takes the fallback the source wants, so a default is
-written once, where it is used.
+and resolves no secret alias. Each accessor takes the fallback value to use when the setting is absent.
 
 ```java
 this.baseUrl = configuration.getString("base_url").orElse(DEFAULT_BASE_URL);
@@ -524,19 +538,18 @@ path outside them resolves to empty and is logged.
         <th>Reason</th>
     </tr>
     <tr>
-        <td>Return <code>UNAVAILABLE</code> for any result that is not a positive determination, and log why.
-        Never return <code>NOT_FOUND</code> because a call failed.</td>
-        <td>Reporting a failed check as a clean password is what allows enforcement to stop silently.</td>
+        <td>Apply your own timeout to every outbound call.</td>
+        <td>The server calls <code>check</code> on the thread performing the password write and does not
+        bound it. A source that blocks indefinitely blocks the write.</td>
+    </tr>
+    <tr>
+        <td>Never return <code>ACCEPT</code> to mean "I could not check" without logging the reason.</td>
+        <td>An unlogged failure leaves no record that the password went unchecked.</td>
     </tr>
     <tr>
         <td>Never log, cache, or transmit the credential, and do not retain it after the call returns. Use
         <code>digestHex(algorithm)</code> rather than reading the characters.</td>
-        <td>The candidate is supplied as a <code>char[]</code> that the server clears after evaluation.</td>
-    </tr>
-    <tr>
-        <td>Do not assume <code>evaluate</code> runs on the caller's thread, and do not block without a
-        timeout of your own.</td>
-        <td>Every source is called on a worker thread and bounded by <code>evaluation_timeout_ms</code>. A
-        source that exceeds it is abandoned and treated as <code>UNAVAILABLE</code>.</td>
+        <td>The candidate is supplied as a <code>char[]</code> that the server clears after the last source
+        returns.</td>
     </tr>
 </table>

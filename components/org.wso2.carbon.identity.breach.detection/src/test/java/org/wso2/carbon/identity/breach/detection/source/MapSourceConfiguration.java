@@ -18,7 +18,7 @@
 
 package org.wso2.carbon.identity.breach.detection.source;
 
-import org.wso2.carbon.identity.breach.detection.SourceConfiguration;
+import org.wso2.carbon.identity.breach.detection.spi.SourceConfiguration;
 
 import java.util.HashMap;
 import java.util.Map;

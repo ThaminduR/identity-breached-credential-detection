@@ -23,10 +23,10 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.breach.detection.config.BreachDetectionConfig;
 import org.wso2.carbon.identity.breach.detection.constants.BreachDetectionConstants;
 import org.wso2.carbon.identity.breach.detection.engine.BreachEvaluationEngine;
-import org.wso2.carbon.identity.breach.detection.engine.Decision;
+import org.wso2.carbon.identity.breach.detection.model.Decision;
 import org.wso2.carbon.identity.breach.detection.internal.BreachDetectionDataHolder;
 import org.wso2.carbon.identity.breach.detection.util.BreachDetectionUtils;
-import org.wso2.carbon.identity.breach.detection.Credential;
+import org.wso2.carbon.identity.breach.detection.model.Credential;
 import org.wso2.carbon.identity.core.AbstractIdentityUserOperationEventListener;
 import org.wso2.carbon.identity.core.context.IdentityContext;
 import org.wso2.carbon.identity.core.context.model.Flow;
@@ -67,7 +67,6 @@ public class BreachDetectionListener extends AbstractIdentityUserOperationEventL
                                 Map<String, String> claims, String profile, UserStoreManager userStoreManager)
             throws UserStoreException {
 
-        // Self-registration, administrative user creation and invitation completion all arrive here.
         return check(credential, userStoreManager);
     }
 
@@ -89,7 +88,6 @@ public class BreachDetectionListener extends AbstractIdentityUserOperationEventL
     public boolean doPreUpdateCredentialByAdmin(String userName, Object newCredential,
                                                 UserStoreManager userStoreManager) throws UserStoreException {
 
-        // Administrative reset, and the reset that completes a recovery flow.
         return check(newCredential, userStoreManager);
     }
 
@@ -114,7 +112,7 @@ public class BreachDetectionListener extends AbstractIdentityUserOperationEventL
 
         char[] chars = extract(credential);
         if (chars == null || chars.length == 0) {
-            // Nothing to check. Composition rules handle empty and malformed input.
+            // Composition rules handle empty and malformed input.
             return true;
         }
 
@@ -122,17 +120,15 @@ public class BreachDetectionListener extends AbstractIdentityUserOperationEventL
             return true;
         }
 
-        // A copy, so that clearing it after evaluation cannot corrupt the write that follows.
+        // A copy, because the engine clears it and the write that follows needs the original.
         Credential candidate = new Credential(Arrays.copyOf(chars, chars.length));
 
-        // The engine owns the copy from here: it clears it before returning, or leaves it to the collector
-        // when a source timed out and may still be reading it.
         Decision decision;
         try {
             decision = engine.evaluate(candidate, resolveTenantDomain(userStoreManager));
         } catch (Throwable t) {
             candidate.clear();
-            // A defect in our own engine is a server fault, and must not masquerade as a policy decision.
+            // A defect in the engine is a server fault, not a policy decision, so the write is refused.
             LOG.error("Breached password detection failed unexpectedly. The credential write is refused.", t);
             throw new UserStoreException("An internal error occurred while checking the password.");
         }

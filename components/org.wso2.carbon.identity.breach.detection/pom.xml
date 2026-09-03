@@ -95,19 +95,21 @@
                             org.wso2.carbon.identity.breach.detection.util
                         </Private-Package>
                         <!--
-                          Two packages are exported. The root package is the contract a connector implements,
-                          and it carries the CONTRACT version rather than ${project.version}: connectors are
-                          built outside this repository, so versioning the contract on this repository's
-                          release number would invalidate every one of them on a release that never touched
-                          it. The constants package is exported so a caller can name the error code it
-                          caught. Every other package is private.
+                          Three packages are exported. The spi and model packages are the contract a
+                          connector implements, and they carry the CONTRACT version rather than
+                          ${project.version}. Connectors are built outside this repository, so versioning
+                          the contract on this repository's release number would break a connector on a
+                          release that never changed the contract. The constants package is exported so a
+                          caller can name the error code it caught. Every other package is private.
                         -->
                         <Export-Package>
-                            org.wso2.carbon.identity.breach.detection;version="${breach.spi.package.version}",
+                            org.wso2.carbon.identity.breach.detection.spi;version="${breach.spi.package.version}",
+                            org.wso2.carbon.identity.breach.detection.model;version="${breach.spi.package.version}",
                             org.wso2.carbon.identity.breach.detection.constants;version="${breach.detection.exp.pkg.version}"
                         </Export-Package>
                         <Import-Package>
-                            !org.wso2.carbon.identity.breach.detection,
+                            !org.wso2.carbon.identity.breach.detection.spi,
+                            !org.wso2.carbon.identity.breach.detection.model,
                             org.osgi.framework;version="${osgi.framework.imp.pkg.version.range}",
                             org.osgi.service.component;version="${osgi.service.component.imp.pkg.version.range}",
                             org.apache.commons.logging;version="${commons-logging.osgi.version.range}",
