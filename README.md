@@ -129,7 +129,7 @@ edit to discover it, and removing the JAR unbinds it and changes nothing else.
 [identity-password-validator-hibp](https://github.com/wso2-extensions/identity-password-validator-hibp) is the
 reference connector — Have I Been Pwned, checked without the password leaving the deployment.
 
-To write your own, see [DOC.md → Writing a breach source](DOC.md#writing-a-breach-source).
+To write your own, see [DOC.md → Implement a breach source](DOC.md#implement-a-breach-source).
 
 ## Uninstall
 

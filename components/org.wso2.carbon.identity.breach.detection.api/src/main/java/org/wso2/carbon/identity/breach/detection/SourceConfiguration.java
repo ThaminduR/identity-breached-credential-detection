@@ -16,15 +16,16 @@
  * under the License.
  */
 
-package org.wso2.carbon.identity.breach.source;
+package org.wso2.carbon.identity.breach.detection;
 
 import java.util.Optional;
 
 /**
  * The resolved deployment settings for one source.
  * <p>
- * A source declares what it needs through {@link BreachSource#getProperties()} and receives the values here.
- * It never reads configuration files and never touches the vault.
+ * A source declares the names it reads through {@link BreachSource#getPropertyNames()} and receives the
+ * values here. It never reads a configuration file and never resolves a secret alias itself. Each accessor
+ * takes the fallback the source wants, so a default is written once, where it is used.
  */
 public interface SourceConfiguration {
 
@@ -48,14 +49,6 @@ public interface SourceConfiguration {
      * @return the resolved flag.
      */
     boolean getBoolean(String name, boolean defaultValue);
-
-    /**
-     * Resolve a property declared {@code secret}. The caller owns the array and must wipe it after use.
-     *
-     * @param name declared property name.
-     * @return the secret, or empty when unset.
-     */
-    Optional<char[]> getSecret(String name);
 
     /**
      * Resolve a path, confined to the deployment and configuration directories. A path outside them resolves

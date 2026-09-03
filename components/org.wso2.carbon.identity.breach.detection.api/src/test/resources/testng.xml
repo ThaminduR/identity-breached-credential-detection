@@ -2,7 +2,7 @@
 <suite name="breach-source-spi">
     <test name="breach-source-spi-tests">
         <packages>
-            <package name="org.wso2.carbon.identity.breach.source"/>
+            <package name="org.wso2.carbon.identity.breach.detection"/>
         </packages>
     </test>
 </suite>

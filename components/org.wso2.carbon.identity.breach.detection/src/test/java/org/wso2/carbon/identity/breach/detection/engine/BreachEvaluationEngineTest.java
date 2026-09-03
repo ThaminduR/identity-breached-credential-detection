@@ -20,8 +20,8 @@ package org.wso2.carbon.identity.breach.detection.engine;
 
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
-import org.wso2.carbon.identity.breach.source.Outcome;
-import org.wso2.carbon.identity.breach.source.Credential;
+import org.wso2.carbon.identity.breach.detection.Outcome;
+import org.wso2.carbon.identity.breach.detection.Credential;
 
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;

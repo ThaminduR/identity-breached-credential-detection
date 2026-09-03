@@ -450,21 +450,73 @@ usually indicates that a connector bundle is missing.
 
 ## Implement a breach source
 
-Implement `BreachSource` and register it from your bundle activator.
+Implement `BreachSource` and register it as an OSGi service from your bundle activator.
 
 ```java
 bundleContext.registerService(BreachSource.class, new MyBreachSource(), null);
 ```
 
-Only `getId()` and `evaluate(BreachContext)` are abstract. Every other method has a default, and the contract
-gains default methods rather than abstract ones, so a connector continues to compile across additive revisions.
+Every method on the interface is abstract. Enablement, failure behaviour and configuration must each be
+stated by the source rather than inherited from a default.
 
-Declare the settings your source needs through `getProperties()`. The server resolves them and provides them
-through `configure(SourceConfiguration)`, so a connector reads no file and holds no vault handle of its own.
-This is what allows a property declared as `secret` to be resolved through the secure vault and never returned
-as a plain value.
+<table>
+    <tr>
+        <th>Method</th>
+        <th>Contract</th>
+    </tr>
+    <tr>
+        <td><code>getId()</code></td>
+        <td>A stable id, lowercase and without spaces. Deployment configuration is namespaced on it.</td>
+    </tr>
+    <tr>
+        <td><code>getPropertyNames()</code></td>
+        <td>The deployment setting names this source reads. A configured key that is not listed is reported as
+        unrecognised at startup, so a typo does not silently leave the source on its defaults.</td>
+    </tr>
+    <tr>
+        <td><code>getPriority()</code></td>
+        <td>A cost hint. The server calls sources in ascending order and stops at the first
+        <code>FOUND</code>.</td>
+    </tr>
+    <tr>
+        <td><code>configure(SourceConfiguration)</code></td>
+        <td>Receive the resolved deployment settings. Called when the source binds and again on
+        reconfiguration.</td>
+    </tr>
+    <tr>
+        <td><code>isEnabled(tenantDomain)</code></td>
+        <td>Whether the organization wants this source consulted, and whether it is configured well enough to
+        answer. A source that is not usable returns <code>false</code> here.</td>
+    </tr>
+    <tr>
+        <td><code>refusesWhenUnavailable(tenantDomain)</code></td>
+        <td>Whether a password this source could not check is refused or allowed.</td>
+    </tr>
+    <tr>
+        <td><code>evaluate(credential, tenantDomain)</code></td>
+        <td><code>FOUND</code>, <code>NOT_FOUND</code>, or <code>UNAVAILABLE</code>.</td>
+    </tr>
+</table>
 
-A source must observe the following rules.
+### Reading configuration
+
+Settings reach the source through `configure(SourceConfiguration)`. The source reads no configuration file
+and resolves no secret alias itself. Each accessor takes the fallback the source wants, so a default is
+written once, where it is used.
+
+```java
+this.baseUrl = configuration.getString("base_url").orElse(DEFAULT_BASE_URL);
+this.readTimeoutMs = configuration.getInt("read_timeout_ms", 1500);
+```
+
+Any property value may be a secure vault reference, written either as `$secret{alias}` or as a
+`secretAlias` attribute on the property element. The configuration layer resolves it before `configure` is
+called, so the source always receives plain text.
+
+`getPath(name)` resolves a filesystem path and confines it to the deployment and configuration directories. A
+path outside them resolves to empty and is logged.
+
+### Rules a source must observe
 
 <table>
     <tr>
@@ -472,21 +524,19 @@ A source must observe the following rules.
         <th>Reason</th>
     </tr>
     <tr>
-        <td>Return <code>UNAVAILABLE</code>, or throw <code>BreachSourceException</code>, for any result that is
-        not a positive determination. Never return <code>NOT_FOUND</code> because a call failed.</td>
+        <td>Return <code>UNAVAILABLE</code> for any result that is not a positive determination, and log why.
+        Never return <code>NOT_FOUND</code> because a call failed.</td>
         <td>Reporting a failed check as a clean password is what allows enforcement to stop silently.</td>
     </tr>
     <tr>
-        <td>Never log, cache, or transmit the credential in a recoverable form, and do not retain it after the
-        call returns. Use <code>digestHex(algorithm)</code> rather than reading the characters.</td>
+        <td>Never log, cache, or transmit the credential, and do not retain it after the call returns. Use
+        <code>digestHex(algorithm)</code> rather than reading the characters.</td>
         <td>The candidate is supplied as a <code>char[]</code> that the server clears after evaluation.</td>
     </tr>
     <tr>
-        <td>Implement <code>isEnabled(tenantDomain)</code>. It returns <code>false</code> by default.</td>
-        <td>A source is consulted only when it reports that an organization has enabled it, and publishing the
-        configuration surface for that decision is the source's responsibility.</td>
+        <td>Do not assume <code>evaluate</code> runs on the caller's thread, and do not block without a
+        timeout of your own.</td>
+        <td>Every source is called on a worker thread and bounded by <code>evaluation_timeout_ms</code>. A
+        source that exceeds it is abandoned and treated as <code>UNAVAILABLE</code>.</td>
     </tr>
 </table>
-
-Return `true` from `isOffline()` only if your source answers without crossing the deployment boundary. The
-server then calls it on the calling thread, and `evaluation_timeout_ms` does not apply.

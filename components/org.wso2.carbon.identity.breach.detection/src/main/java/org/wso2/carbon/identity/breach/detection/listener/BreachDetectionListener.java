@@ -26,7 +26,7 @@ import org.wso2.carbon.identity.breach.detection.engine.BreachEvaluationEngine;
 import org.wso2.carbon.identity.breach.detection.engine.Decision;
 import org.wso2.carbon.identity.breach.detection.internal.BreachDetectionDataHolder;
 import org.wso2.carbon.identity.breach.detection.util.BreachDetectionUtils;
-import org.wso2.carbon.identity.breach.source.Credential;
+import org.wso2.carbon.identity.breach.detection.Credential;
 import org.wso2.carbon.identity.core.AbstractIdentityUserOperationEventListener;
 import org.wso2.carbon.identity.core.context.IdentityContext;
 import org.wso2.carbon.identity.core.context.model.Flow;

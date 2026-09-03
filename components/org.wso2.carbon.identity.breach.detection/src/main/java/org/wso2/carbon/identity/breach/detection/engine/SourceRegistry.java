@@ -21,7 +21,7 @@ package org.wso2.carbon.identity.breach.detection.engine;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.breach.detection.util.BreachDetectionUtils;
-import org.wso2.carbon.identity.breach.source.BreachSource;
+import org.wso2.carbon.identity.breach.detection.BreachSource;
 
 import java.util.ArrayList;
 import java.util.Comparator;

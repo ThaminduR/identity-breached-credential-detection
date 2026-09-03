@@ -18,11 +18,10 @@
 
 package org.wso2.carbon.identity.breach.detection.engine;
 
-import org.wso2.carbon.identity.breach.source.Credential;
-import org.wso2.carbon.identity.breach.source.BreachSource;
-import org.wso2.carbon.identity.breach.source.Outcome;
-import org.wso2.carbon.identity.breach.source.PropertyDescriptor;
-import org.wso2.carbon.identity.breach.source.SourceConfiguration;
+import org.wso2.carbon.identity.breach.detection.Credential;
+import org.wso2.carbon.identity.breach.detection.BreachSource;
+import org.wso2.carbon.identity.breach.detection.Outcome;
+import org.wso2.carbon.identity.breach.detection.SourceConfiguration;
 
 import java.util.Collections;
 import java.util.List;
@@ -100,7 +99,7 @@ class StubBreachSource implements BreachSource {
     }
 
     @Override
-    public List<PropertyDescriptor> getProperties() {
+    public List<String> getPropertyNames() {
 
         return Collections.emptyList();
     }

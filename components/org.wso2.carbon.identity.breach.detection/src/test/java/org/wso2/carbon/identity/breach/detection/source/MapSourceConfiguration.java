@@ -18,7 +18,7 @@
 
 package org.wso2.carbon.identity.breach.detection.source;
 
-import org.wso2.carbon.identity.breach.source.SourceConfiguration;
+import org.wso2.carbon.identity.breach.detection.SourceConfiguration;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -54,12 +54,6 @@ class MapSourceConfiguration implements SourceConfiguration {
     public boolean getBoolean(String name, boolean defaultValue) {
 
         return getString(name).map(Boolean::parseBoolean).orElse(defaultValue);
-    }
-
-    @Override
-    public Optional<char[]> getSecret(String name) {
-
-        return getString(name).map(String::toCharArray);
     }
 
     @Override

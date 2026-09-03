@@ -21,11 +21,10 @@ package org.wso2.carbon.identity.breach.detection.source;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.breach.detection.constants.BreachDetectionConstants;
-import org.wso2.carbon.identity.breach.source.BreachSource;
-import org.wso2.carbon.identity.breach.source.Credential;
-import org.wso2.carbon.identity.breach.source.Outcome;
-import org.wso2.carbon.identity.breach.source.PropertyDescriptor;
-import org.wso2.carbon.identity.breach.source.SourceConfiguration;
+import org.wso2.carbon.identity.breach.detection.BreachSource;
+import org.wso2.carbon.identity.breach.detection.Credential;
+import org.wso2.carbon.identity.breach.detection.Outcome;
+import org.wso2.carbon.identity.breach.detection.SourceConfiguration;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -71,13 +70,9 @@ public class LocalBlocklistSource implements BreachSource {
 
 
     @Override
-    public List<PropertyDescriptor> getProperties() {
+    public List<String> getPropertyNames() {
 
-        return Arrays.asList(
-                PropertyDescriptor.optional(PROPERTY_ENABLE, "true"),
-                PropertyDescriptor.required(PROPERTY_PATH),
-                PropertyDescriptor.required(PROPERTY_FORMAT),
-                PropertyDescriptor.optional(PROPERTY_MAX_HEAP_ENTRIES, String.valueOf(DEFAULT_MAX_HEAP_ENTRIES)));
+        return Arrays.asList(PROPERTY_ENABLE, PROPERTY_PATH, PROPERTY_FORMAT, PROPERTY_MAX_HEAP_ENTRIES);
     }
 
     @Override

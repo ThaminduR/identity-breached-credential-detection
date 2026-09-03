@@ -16,7 +16,7 @@
  * under the License.
  */
 
-package org.wso2.carbon.identity.breach.source;
+package org.wso2.carbon.identity.breach.detection;
 
 import java.util.List;
 
@@ -35,9 +35,12 @@ public interface BreachSource {
     String getId();
 
     /**
-     * @return the deployment settings this source needs, or an empty list.
+     * The deployment setting names this source reads. A configured key that is not listed here is reported
+     * as unrecognised, so a typo does not silently leave the source on its defaults.
+     *
+     * @return the setting names, or an empty list.
      */
-    List<PropertyDescriptor> getProperties();
+    List<String> getPropertyNames();
 
     /**
      * @return a cost hint. The engine calls sources in ascending order.

@@ -107,7 +107,7 @@
                             org.wso2.carbon.identity.breach.detection.constants;version="${breach.detection.exp.pkg.version}"
                         </Export-Package>
                         <Import-Package>
-                            org.wso2.carbon.identity.breach.source;version="${breach.spi.imp.pkg.version.range}",
+                            org.wso2.carbon.identity.breach.detection;version="${breach.spi.imp.pkg.version.range}",
                             org.osgi.framework;version="${osgi.framework.imp.pkg.version.range}",
                             org.osgi.service.component;version="${osgi.service.component.imp.pkg.version.range}",
                             org.apache.commons.logging;version="${commons-logging.osgi.version.range}",

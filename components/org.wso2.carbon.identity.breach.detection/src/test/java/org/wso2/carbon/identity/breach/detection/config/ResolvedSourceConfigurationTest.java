@@ -20,7 +20,6 @@ package org.wso2.carbon.identity.breach.detection.config;
 
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
-import org.wso2.carbon.identity.breach.source.PropertyDescriptor;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -35,17 +34,12 @@ import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
 /**
- * Resolving a source's declared settings, and the two disciplines that make the declaration mean something:
- * a path cannot escape the deployment, and a value not declared secret cannot be read as one.
+ * Resolving a source's settings, including the rule that a configured path cannot escape the deployment.
  */
 public class ResolvedSourceConfigurationTest {
 
-    private static final List<PropertyDescriptor> DESCRIPTORS = Arrays.asList(
-            PropertyDescriptor.required("path"),
-            PropertyDescriptor.optional("format", "auto"),
-            PropertyDescriptor.optional("read_timeout_ms", "1500"),
-            PropertyDescriptor.secret("api_key"),
-            PropertyDescriptor.optional("verbose", "false"));
+    private static final List<String> NAMES =
+            Arrays.asList("path", "format", "read_timeout_ms", "api_key", "verbose");
 
     private Path carbonHome;
 
@@ -58,12 +52,12 @@ public class ResolvedSourceConfigurationTest {
     }
 
     @Test
-    public void anUnsetSettingFallsBackToTheDeclaredDefault() {
+    public void anUnsetSettingFallsBackToTheCallersDefault() {
 
         ResolvedSourceConfiguration configuration = resolve(new LinkedHashMap<>());
-        assertEquals(configuration.getString("format").orElse(null), "auto");
-        assertEquals(configuration.getInt("read_timeout_ms", 9999), 1500);
-        assertFalse(configuration.getBoolean("verbose", false));
+        assertFalse(configuration.getString("format").isPresent());
+        assertEquals(configuration.getInt("read_timeout_ms", 9999), 9999);
+        assertTrue(configuration.getBoolean("verbose", true));
     }
 
     @Test
@@ -85,17 +79,19 @@ public class ResolvedSourceConfigurationTest {
     }
 
     @Test
-    public void aSecretIsReadableOnlyWhereItWasDeclaredSecret() {
+    public void aBlankValueCountsAsUnset() {
 
         Map<String, String> values = new LinkedHashMap<>();
-        values.put("api_key", "s3cr3t");
-        values.put("format", "sha1");
-        ResolvedSourceConfiguration configuration = resolve(values);
+        values.put("format", "   ");
+        assertFalse(resolve(values).getString("format").isPresent());
+    }
 
-        assertEquals(new String(configuration.getSecret("api_key").orElse(new char[0])), "s3cr3t");
-        assertFalse(configuration.getSecret("format").isPresent(),
-                "A value not declared secret must not be reachable as one.");
-        assertFalse(configuration.getSecret("unknown").isPresent());
+    @Test
+    public void anUndeclaredKeyIsReportedButStillResolves() {
+
+        Map<String, String> values = new LinkedHashMap<>();
+        values.put("frmat", "sha1");
+        assertEquals(resolve(values).getString("frmat").orElse(null), "sha1");
     }
 
     @Test
@@ -125,7 +121,6 @@ public class ResolvedSourceConfigurationTest {
 
     private ResolvedSourceConfiguration resolve(Map<String, String> values) {
 
-        return new ResolvedSourceConfiguration("test",
-                DESCRIPTORS, values);
+        return new ResolvedSourceConfiguration("test", NAMES, values);
     }
 }

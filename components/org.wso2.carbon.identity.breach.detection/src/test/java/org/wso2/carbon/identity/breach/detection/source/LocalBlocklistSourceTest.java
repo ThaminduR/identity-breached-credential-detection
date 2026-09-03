@@ -19,8 +19,8 @@
 package org.wso2.carbon.identity.breach.detection.source;
 
 import org.testng.annotations.Test;
-import org.wso2.carbon.identity.breach.source.Credential;
-import org.wso2.carbon.identity.breach.source.Outcome;
+import org.wso2.carbon.identity.breach.detection.Credential;
+import org.wso2.carbon.identity.breach.detection.Outcome;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;

@@ -16,7 +16,7 @@
  * under the License.
  */
 
-package org.wso2.carbon.identity.breach.source;
+package org.wso2.carbon.identity.breach.detection;
 
 /**
  * What a source concluded about a candidate password. The whole of a source's answer.

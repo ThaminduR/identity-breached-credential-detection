@@ -58,10 +58,10 @@
                           them on a release that never touched the contract.
                         -->
                         <Export-Package>
-                            org.wso2.carbon.identity.breach.source;version="${breach.spi.package.version}"
+                            org.wso2.carbon.identity.breach.detection;version="${breach.spi.package.version}"
                         </Export-Package>
                         <Import-Package>
-                            !org.wso2.carbon.identity.breach.source,
+                            !org.wso2.carbon.identity.breach.detection,
                             *
                         </Import-Package>
                     </instructions>

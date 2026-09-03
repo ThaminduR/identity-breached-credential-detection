@@ -20,8 +20,7 @@ package org.wso2.carbon.identity.breach.detection.config;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.wso2.carbon.identity.breach.source.PropertyDescriptor;
-import org.wso2.carbon.identity.breach.source.SourceConfiguration;
+import org.wso2.carbon.identity.breach.detection.SourceConfiguration;
 import org.wso2.carbon.identity.breach.detection.util.BreachDetectionUtils;
 import org.wso2.carbon.utils.CarbonUtils;
 
@@ -30,18 +29,17 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
 /**
- * The settings one source declared, resolved against what the operator configured.
+ * The deployment settings for one source, resolved from the configuration layer.
  * <p>
- * The source itself reads nothing: it declares what it needs and the core hands the values over. That is what
- * makes the {@code secret} flag enforceable rather than advisory, and it is why a connector holds no
- * filesystem or vault access of its own.
+ * The source reads nothing itself. It declares the names it uses and the core hands the values over, which is
+ * why a connector needs no filesystem access and no vault handle. Secret aliases are already resolved by the
+ * configuration layer, so a value arrives here as plain text.
  */
 public class ResolvedSourceConfiguration implements SourceConfiguration {
 
@@ -49,33 +47,28 @@ public class ResolvedSourceConfiguration implements SourceConfiguration {
 
     private final String sourceId;
     private final Map<String, String> values;
-    private final Map<String, PropertyDescriptor> declared;
+    private final Set<String> declared;
 
-    public ResolvedSourceConfiguration(String sourceId, List<PropertyDescriptor> descriptors,
+    public ResolvedSourceConfiguration(String sourceId, List<String> declaredNames,
                                        Map<String, String> configured) {
 
         this.sourceId = sourceId;
-        this.declared = new LinkedHashMap<>();
-        for (PropertyDescriptor descriptor : descriptors) {
-            declared.put(descriptor.getName(), descriptor);
-        }
+        this.declared = new HashSet<>(declaredNames);
         this.values = new HashMap<>();
         if (configured != null) {
             values.putAll(configured);
             reportUnrecognisedKeys();
         }
-        reportMissingRequired();
     }
 
     @Override
     public Optional<String> getString(String name) {
 
         String value = values.get(name);
-        if (value != null && !value.trim().isEmpty()) {
-            return Optional.of(value.trim());
+        if (value == null || value.trim().isEmpty()) {
+            return Optional.empty();
         }
-        PropertyDescriptor descriptor = declared.get(name);
-        return descriptor == null ? Optional.empty() : descriptor.getDefaultValue();
+        return Optional.of(value.trim());
     }
 
     @Override
@@ -89,23 +82,6 @@ public class ResolvedSourceConfiguration implements SourceConfiguration {
     public boolean getBoolean(String name, boolean defaultValue) {
 
         return BreachDetectionUtils.parseBoolean(getString(name).orElse(null), defaultValue);
-    }
-
-    @Override
-    public Optional<char[]> getSecret(String name) {
-
-        PropertyDescriptor descriptor = declared.get(name);
-        if (descriptor == null || !descriptor.isSecret()) {
-            // Refusing here is the point: a value not declared secret must not be reachable as one.
-            LOG.warn("Source '" + sourceId + "' asked for '" + name + "' as a secret, but it is not declared "
-                    + "as one. Returning nothing.");
-            return Optional.empty();
-        }
-        String value = values.get(name);
-        if (value == null || value.trim().isEmpty()) {
-            return Optional.empty();
-        }
-        return Optional.of(value.trim().toCharArray());
     }
 
     @Override
@@ -183,20 +159,10 @@ public class ResolvedSourceConfiguration implements SourceConfiguration {
     private void reportUnrecognisedKeys() {
 
         for (String key : values.keySet()) {
-            if (!declared.containsKey(key)) {
+            if (!declared.contains(key)) {
                 // Reported rather than ignored: a typo must not silently leave a connector on its default.
                 LOG.warn("Breach detection source '" + sourceId + "' has no setting named '" + key
                         + "'. Check the [breach_detection.sources." + sourceId + "] configuration.");
-            }
-        }
-    }
-
-    private void reportMissingRequired() {
-
-        for (PropertyDescriptor descriptor : declared.values()) {
-            if (descriptor.isRequired() && !getString(descriptor.getName()).isPresent()) {
-                LOG.warn("Breach detection source '" + sourceId + "' requires '" + descriptor.getName()
-                        + "', which is not configured. The source will report itself as not configured.");
             }
         }
     }

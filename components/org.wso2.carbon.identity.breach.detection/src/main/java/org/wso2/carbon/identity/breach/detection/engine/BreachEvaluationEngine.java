@@ -20,9 +20,9 @@ package org.wso2.carbon.identity.breach.detection.engine;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.wso2.carbon.identity.breach.source.Credential;
-import org.wso2.carbon.identity.breach.source.BreachSource;
-import org.wso2.carbon.identity.breach.source.Outcome;
+import org.wso2.carbon.identity.breach.detection.Credential;
+import org.wso2.carbon.identity.breach.detection.BreachSource;
+import org.wso2.carbon.identity.breach.detection.Outcome;
 
 import java.util.ArrayList;
 import java.util.List;

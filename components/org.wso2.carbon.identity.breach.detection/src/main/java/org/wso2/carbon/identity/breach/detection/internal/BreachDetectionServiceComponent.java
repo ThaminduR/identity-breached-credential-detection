@@ -35,7 +35,7 @@ import org.wso2.carbon.identity.breach.detection.engine.BreachEvaluationEngine;
 import org.wso2.carbon.identity.breach.detection.engine.SourceRegistry;
 import org.wso2.carbon.identity.breach.detection.listener.BreachDetectionListener;
 import org.wso2.carbon.identity.breach.detection.source.LocalBlocklistSource;
-import org.wso2.carbon.identity.breach.source.BreachSource;
+import org.wso2.carbon.identity.breach.detection.BreachSource;
 import org.wso2.carbon.identity.breach.detection.util.BreachDetectionUtils;
 import org.wso2.carbon.identity.core.util.IdentityCoreInitializedEvent;
 import org.wso2.carbon.user.core.listener.UserOperationEventListener;
@@ -115,7 +115,7 @@ public class BreachDetectionServiceComponent {
         try {
             Map<String, String> configured = BreachDetectionConfig.getInstance()
                     .getSourceProperties(BreachDetectionUtils.normalizeSourceId(source.getId()));
-            source.configure(new ResolvedSourceConfiguration(source.getId(), source.getProperties(), configured));
+            source.configure(new ResolvedSourceConfiguration(source.getId(), source.getPropertyNames(), configured));
         } catch (Throwable t) {
             LOG.error("Failed to configure breach source '" + source.getId()
                     + "'. It will report itself as not configured.", t);
