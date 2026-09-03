@@ -61,7 +61,9 @@ public class BreachEvaluationEngine {
         this.timeoutMs = timeoutMs;
         int threads = Math.max(1, workerThreads);
         AtomicInteger counter = new AtomicInteger();
-        this.executor = new ThreadPoolExecutor(1, threads, 60L, TimeUnit.SECONDS,
+        // Core size equals the maximum: a ThreadPoolExecutor only grows past the core size once the queue is
+        // full, so a smaller core with a bounded queue would serialise every evaluation onto one thread.
+        this.executor = new ThreadPoolExecutor(threads, threads, 60L, TimeUnit.SECONDS,
                 new ArrayBlockingQueue<>(threads * 10),
                 runnable -> {
                     Thread thread = new Thread(runnable, "breach-source-" + counter.incrementAndGet());
@@ -69,6 +71,7 @@ public class BreachEvaluationEngine {
                     return thread;
                 },
                 new ThreadPoolExecutor.AbortPolicy());
+        this.executor.allowCoreThreadTimeOut(true);
     }
 
     /**
@@ -96,7 +99,7 @@ public class BreachEvaluationEngine {
         List<BreachVerdict> verdicts = new ArrayList<>(plan.size());
 
         for (BreachSource source : plan) {
-            BreachVerdict verdict = call(source, context, credentialInFlight);
+            BreachVerdict verdict = call(source, idOf(source), context, credentialInFlight);
             verdicts.add(verdict);
             if (verdict.getOutcome() == Outcome.FOUND) {
                 // A match ends it. Nothing after this needs asking, and no network call is worth making.
@@ -141,22 +144,8 @@ public class BreachEvaluationEngine {
         return planned;
     }
 
-    private BreachVerdict call(BreachSource source, BreachContext context, AtomicBoolean credentialInFlight) {
-
-        String sourceId = source.getId();
-        try {
-            if (!source.isConfigured(context.getTenantDomain())) {
-                return BreachVerdict.unavailable(sourceId, UnavailableCause.MISCONFIGURED,
-                        "The source is installed but not configured.");
-            }
-        } catch (Throwable t) {
-            return contain(sourceId, t);
-        }
-
-        if (source.isOffline()) {
-            // In-process and answering in microseconds. A thread hand-off would cost more than the lookup.
-            return invoke(source, context);
-        }
+    private BreachVerdict call(BreachSource source, String sourceId, BreachContext context,
+                               AtomicBoolean credentialInFlight) {
 
         Future<BreachVerdict> future;
         try {
@@ -180,6 +169,18 @@ public class BreachEvaluationEngine {
                     "The evaluation was interrupted.");
         } catch (Exception e) {
             return contain(sourceId, e.getCause() == null ? e : e.getCause());
+        }
+    }
+
+    /**
+     * The id, or a placeholder if the source cannot supply one. Nothing a source does may fail the write.
+     */
+    private static String idOf(BreachSource source) {
+
+        try {
+            return source.getId();
+        } catch (Throwable t) {
+            return "unknown";
         }
     }
 

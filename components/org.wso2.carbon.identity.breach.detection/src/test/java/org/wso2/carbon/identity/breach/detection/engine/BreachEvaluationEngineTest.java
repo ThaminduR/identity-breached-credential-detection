@@ -52,7 +52,7 @@ public class BreachEvaluationEngineTest {
     @Test
     public void aSourceThatIsNotEnabledIsNeverConsulted() {
 
-        StubBreachSource local = StubBreachSource.offline("localList", 100,
+        StubBreachSource local = StubBreachSource.source("localList", 100,
                 c -> BreachVerdict.found("localList")).disabled();
         registry.bind(local);
 
@@ -62,16 +62,21 @@ public class BreachEvaluationEngineTest {
         assertEquals(local.getCalls(), 0);
     }
 
+    /**
+     * With nothing bound at all the plan is empty. That is a legitimate state - it is what an organization
+     * that has switched nothing on looks like - and it must accept rather than fail the write.
+     */
     @Test
     public void nothingEnabledMeansTheCapabilityIsSimplyOff() {
 
+        assertEquals(engine.evaluate(context()), Decision.ACCEPT);
     }
 
     @Test
     public void anyFoundRefusesAsBreached() {
 
-        registry.bind(StubBreachSource.offline("localList", 100, c -> BreachVerdict.notFound("localList")));
-        registry.bind(StubBreachSource.remote("hibp", 500, c -> BreachVerdict.found("hibp")));
+        registry.bind(StubBreachSource.source("localList", 100, c -> BreachVerdict.notFound("localList")));
+        registry.bind(StubBreachSource.source("hibp", 500, c -> BreachVerdict.found("hibp")));
 
         Decision result = engine.evaluate(context());
 
@@ -81,8 +86,8 @@ public class BreachEvaluationEngineTest {
     @Test
     public void allNotFoundAccepts() {
 
-        registry.bind(StubBreachSource.offline("localList", 100, c -> BreachVerdict.notFound("localList")));
-        registry.bind(StubBreachSource.remote("hibp", 500, c -> BreachVerdict.notFound("hibp")));
+        registry.bind(StubBreachSource.source("localList", 100, c -> BreachVerdict.notFound("localList")));
+        registry.bind(StubBreachSource.source("hibp", 500, c -> BreachVerdict.notFound("hibp")));
 
         Decision result = engine.evaluate(context());
 
@@ -92,8 +97,8 @@ public class BreachEvaluationEngineTest {
     @Test
     public void aSourceThatCannotAnswerAndAllowsIsAcceptedAndReportedDegraded() {
 
-        registry.bind(StubBreachSource.offline("localList", 100, c -> BreachVerdict.notFound("localList")));
-        registry.bind(StubBreachSource.remote("hibp", 500,
+        registry.bind(StubBreachSource.source("localList", 100, c -> BreachVerdict.notFound("localList")));
+        registry.bind(StubBreachSource.source("hibp", 500,
                 c -> BreachVerdict.unavailable("hibp", UnavailableCause.TRANSPORT, "down"))
                 .onFailure(FailureAction.ALLOW));
 
@@ -105,8 +110,8 @@ public class BreachEvaluationEngineTest {
     @Test
     public void aSourceThatCannotAnswerAndDeniesRefusesAsUnverified() {
 
-        registry.bind(StubBreachSource.offline("localList", 100, c -> BreachVerdict.notFound("localList")));
-        registry.bind(StubBreachSource.remote("hibp", 500,
+        registry.bind(StubBreachSource.source("localList", 100, c -> BreachVerdict.notFound("localList")));
+        registry.bind(StubBreachSource.source("hibp", 500,
                 c -> BreachVerdict.unavailable("hibp", UnavailableCause.TRANSPORT, "down"))
                 .onFailure(FailureAction.DENY));
 
@@ -118,7 +123,7 @@ public class BreachEvaluationEngineTest {
     @Test
     public void everySourceUnavailableWithAllowAcceptsButIsNotEnforcing() {
 
-        registry.bind(StubBreachSource.remote("hibp", 500,
+        registry.bind(StubBreachSource.source("hibp", 500,
                 c -> BreachVerdict.unavailable("hibp", UnavailableCause.TIMEOUT, "slow"))
                 .onFailure(FailureAction.ALLOW));
 
@@ -127,23 +132,13 @@ public class BreachEvaluationEngineTest {
         assertEquals(result, Decision.ACCEPT);
     }
 
-    @Test
-    public void aSourceThatIsNotSetUpIsUnavailableRatherThanClean() {
-
-        registry.bind(StubBreachSource.remote("hibp", 500, c -> BreachVerdict.notFound("hibp"))
-                .notConfigured().onFailure(FailureAction.DENY));
-
-        Decision result = engine.evaluate(context());
-
-        assertEquals(result, Decision.REFUSE_UNVERIFIED);
-    }
 
     @Test
     public void theCheapSourceRunsFirstAndAMatchStopsTheRest() {
 
-        StubBreachSource local = StubBreachSource.offline("localList", 100,
+        StubBreachSource local = StubBreachSource.source("localList", 100,
                 c -> BreachVerdict.found("localList"));
-        StubBreachSource remote = StubBreachSource.remote("hibp", 500, c -> BreachVerdict.notFound("hibp"));
+        StubBreachSource remote = StubBreachSource.source("hibp", 500, c -> BreachVerdict.notFound("hibp"));
         registry.bind(remote);
         registry.bind(local);
 
@@ -157,9 +152,9 @@ public class BreachEvaluationEngineTest {
     @Test
     public void anErrorInsideOneSourceIsContainedToThatSource() {
 
-        StubBreachSource broken = StubBreachSource.offline("broken", 100,
+        StubBreachSource broken = StubBreachSource.source("broken", 100,
                 c -> BreachVerdict.notFound("broken")).throwing(new IllegalStateException("connector defect"));
-        StubBreachSource healthy = StubBreachSource.offline("healthy", 200,
+        StubBreachSource healthy = StubBreachSource.source("healthy", 200,
                 c -> BreachVerdict.found("healthy"));
         registry.bind(broken);
         registry.bind(healthy);
@@ -173,9 +168,9 @@ public class BreachEvaluationEngineTest {
     @Test
     public void aSourceThatCannotSayWhetherItIsEnabledIsSkippedRatherThanFailingTheWrite() {
 
-        registry.bind(StubBreachSource.offline("broken", 100, c -> BreachVerdict.found("broken"))
+        registry.bind(StubBreachSource.source("broken", 100, c -> BreachVerdict.found("broken"))
                 .brokenIsEnabled(new IllegalStateException("configuration store down")));
-        registry.bind(StubBreachSource.offline("healthy", 200, c -> BreachVerdict.notFound("healthy")));
+        registry.bind(StubBreachSource.source("healthy", 200, c -> BreachVerdict.notFound("healthy")));
 
         Decision result = engine.evaluate(context());
 
@@ -185,7 +180,7 @@ public class BreachEvaluationEngineTest {
     @Test
     public void aRemoteSourceThatOverrunsItsBudgetIsUnavailableNotClean() {
 
-        registry.bind(StubBreachSource.remote("slow", 500, c -> BreachVerdict.notFound("slow"))
+        registry.bind(StubBreachSource.source("slow", 500, c -> BreachVerdict.notFound("slow"))
                 .slow(2000).onFailure(FailureAction.DENY));
 
         long started = System.currentTimeMillis();
@@ -199,7 +194,7 @@ public class BreachEvaluationEngineTest {
     @Test
     public void theCredentialIsClearedOnceEverySourceHasAnswered() {
 
-        registry.bind(StubBreachSource.offline("localList", 100, c -> BreachVerdict.notFound("localList")));
+        registry.bind(StubBreachSource.source("localList", 100, c -> BreachVerdict.notFound("localList")));
         BreachContext context = context();
 
         engine.evaluate(context);
@@ -210,7 +205,7 @@ public class BreachEvaluationEngineTest {
     @Test
     public void aTimedOutCallLeavesTheCredentialAloneRatherThanCorruptingIt() {
 
-        registry.bind(StubBreachSource.remote("slow", 500, c -> BreachVerdict.notFound("slow")).slow(2000));
+        registry.bind(StubBreachSource.source("slow", 500, c -> BreachVerdict.notFound("slow")).slow(2000));
         BreachContext context = context();
 
         engine.evaluate(context);

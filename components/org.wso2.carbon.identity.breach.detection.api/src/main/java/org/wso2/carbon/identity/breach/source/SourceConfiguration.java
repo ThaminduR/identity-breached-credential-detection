@@ -68,8 +68,8 @@ public interface SourceConfiguration {
     Optional<char[]> getSecret(String name);
 
     /**
-     * Resolve a property declared as a {@link PropertyType#PATH}, confined to the permitted locations. A value
-     * that escapes them resolves to empty and is reported at load.
+     * Resolve a property whose value is a filesystem path, confined to the permitted locations. A value that
+     * escapes them resolves to empty and is reported at load.
      *
      * @param name declared property name.
      * @return the resolved absolute path, or empty.

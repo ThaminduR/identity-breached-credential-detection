@@ -23,7 +23,11 @@ import org.wso2.carbon.identity.breach.source.BreachSource;
 import org.wso2.carbon.identity.breach.source.BreachSourceException;
 import org.wso2.carbon.identity.breach.source.BreachVerdict;
 import org.wso2.carbon.identity.breach.source.FailureAction;
+import org.wso2.carbon.identity.breach.source.PropertyDescriptor;
+import org.wso2.carbon.identity.breach.source.SourceConfiguration;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
@@ -34,41 +38,27 @@ class StubBreachSource implements BreachSource {
 
     private final String id;
     private final int priority;
-    private final boolean offline;
     private final Function<BreachContext, BreachVerdict> answer;
     private final AtomicInteger calls = new AtomicInteger();
 
-    private boolean configured = true;
     private boolean enabled = true;
     private FailureAction failureAction = FailureAction.ALLOW;
     private RuntimeException enabledFailure;
     private RuntimeException failure;
     private long delayMillis;
 
-    private StubBreachSource(String id, int priority, boolean offline,
-                             Function<BreachContext, BreachVerdict> answer) {
+    private StubBreachSource(String id, int priority, Function<BreachContext, BreachVerdict> answer) {
 
         this.id = id;
         this.priority = priority;
-        this.offline = offline;
         this.answer = answer;
     }
 
-    static StubBreachSource offline(String id, int priority, Function<BreachContext, BreachVerdict> answer) {
+    static StubBreachSource source(String id, int priority, Function<BreachContext, BreachVerdict> answer) {
 
-        return new StubBreachSource(id, priority, true, answer);
+        return new StubBreachSource(id, priority, answer);
     }
 
-    static StubBreachSource remote(String id, int priority, Function<BreachContext, BreachVerdict> answer) {
-
-        return new StubBreachSource(id, priority, false, answer);
-    }
-
-    StubBreachSource notConfigured() {
-
-        this.configured = false;
-        return this;
-    }
 
     StubBreachSource disabled() {
 
@@ -112,22 +102,23 @@ class StubBreachSource implements BreachSource {
     }
 
     @Override
+    public List<PropertyDescriptor> getProperties() {
+
+        return Collections.emptyList();
+    }
+
+    @Override
+    public void configure(SourceConfiguration configuration) {
+
+    }
+
+    @Override
     public int getPriority() {
 
         return priority;
     }
 
-    @Override
-    public boolean isOffline() {
 
-        return offline;
-    }
-
-    @Override
-    public boolean isConfigured(String tenantDomain) {
-
-        return configured;
-    }
 
     @Override
     public boolean isEnabled(String tenantDomain) {

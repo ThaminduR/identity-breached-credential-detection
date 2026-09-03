@@ -24,6 +24,7 @@ import org.wso2.carbon.identity.breach.detection.constants.BreachDetectionConsta
 import org.wso2.carbon.identity.breach.source.BreachContext;
 import org.wso2.carbon.identity.breach.source.BreachSource;
 import org.wso2.carbon.identity.breach.source.BreachVerdict;
+import org.wso2.carbon.identity.breach.source.FailureAction;
 import org.wso2.carbon.identity.breach.source.PropertyDescriptor;
 import org.wso2.carbon.identity.breach.source.SourceConfiguration;
 import org.wso2.carbon.identity.breach.source.UnavailableCause;
@@ -95,12 +96,6 @@ public class LocalBlocklistSource implements BreachSource {
     }
 
     @Override
-    public boolean isOffline() {
-
-        return true;
-    }
-
-    @Override
     public void configure(SourceConfiguration configuration) {
 
         boolean enable = configuration.getBoolean(PROPERTY_ENABLE, true);
@@ -135,12 +130,6 @@ public class LocalBlocklistSource implements BreachSource {
         }
     }
 
-    @Override
-    public boolean isConfigured(String tenantDomain) {
-
-        return path != null && snapshot.get() != null;
-    }
-
     /**
      * Supplying a readable file is still what switches the list on; {@link #PROPERTY_ENABLE} exists to park a
      * configured list without unpicking its settings. It is a deployment property rather than a per-tenant one
@@ -150,10 +139,20 @@ public class LocalBlocklistSource implements BreachSource {
     @Override
     public boolean isEnabled(String tenantDomain) {
 
-        return enabled && isConfigured(tenantDomain);
+        return enabled && path != null && snapshot.get() != null;
     }
 
 
+
+    /**
+     * Allow, not deny. A list that failed to load reports itself disabled above, so the engine never consults
+     * it and this value is not reached. See the open question on that behaviour.
+     */
+    @Override
+    public FailureAction getFailureAction(String tenantDomain) {
+
+        return FailureAction.ALLOW;
+    }
 
     @Override
     public BreachVerdict evaluate(BreachContext context) {

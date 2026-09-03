@@ -47,7 +47,6 @@ public class LocalBlocklistSourceTest {
     public void declaresItselfOfflineAndCheapSoTheEngineConsultsItFirst() {
 
         LocalBlocklistSource source = new LocalBlocklistSource();
-        assertTrue(source.isOffline());
         assertTrue(source.getPriority() < 500);
         source.shutdown();
     }
@@ -83,7 +82,6 @@ public class LocalBlocklistSourceTest {
         LocalBlocklistSource source = new LocalBlocklistSource();
         source.configure(new MapSourceConfiguration());
 
-        assertFalse(source.isConfigured(TENANT));
         assertFalse(source.isEnabled(TENANT));
         assertEquals(source.evaluate(context("Password@1")).getOutcome(), Outcome.UNAVAILABLE);
         assertEquals(source.evaluate(context("Password@1")).getCause().orElse(null),
@@ -101,7 +99,6 @@ public class LocalBlocklistSourceTest {
         source.configure(new MapSourceConfiguration()
                 .set(LocalBlocklistSource.PROPERTY_PATH, write(Collections.singletonList("Password@1")).toString()));
 
-        assertFalse(source.isConfigured(TENANT));
         assertFalse(source.isEnabled(TENANT));
         source.shutdown();
     }
