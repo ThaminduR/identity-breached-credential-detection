@@ -39,10 +39,6 @@
 
     <dependencies>
         <dependency>
-            <groupId>org.wso2.carbon.identity.breach</groupId>
-            <artifactId>org.wso2.carbon.identity.breach.detection.api</artifactId>
-        </dependency>
-        <dependency>
             <groupId>org.wso2.carbon.identity.governance</groupId>
             <artifactId>org.wso2.carbon.identity.governance</artifactId>
         </dependency>
@@ -99,15 +95,19 @@
                             org.wso2.carbon.identity.breach.detection.util
                         </Private-Package>
                         <!--
-                          Only the error codes are exported, so a caller can name what it caught. Everything
-                          else is private: a connector that reaches past the SPI is exactly the coupling the
-                          core/connector split exists to prevent.
+                          Two packages are exported. The root package is the contract a connector implements,
+                          and it carries the CONTRACT version rather than ${project.version}: connectors are
+                          built outside this repository, so versioning the contract on this repository's
+                          release number would invalidate every one of them on a release that never touched
+                          it. The constants package is exported so a caller can name the error code it
+                          caught. Every other package is private.
                         -->
                         <Export-Package>
+                            org.wso2.carbon.identity.breach.detection;version="${breach.spi.package.version}",
                             org.wso2.carbon.identity.breach.detection.constants;version="${breach.detection.exp.pkg.version}"
                         </Export-Package>
                         <Import-Package>
-                            org.wso2.carbon.identity.breach.detection;version="${breach.spi.imp.pkg.version.range}",
+                            !org.wso2.carbon.identity.breach.detection,
                             org.osgi.framework;version="${osgi.framework.imp.pkg.version.range}",
                             org.osgi.service.component;version="${osgi.service.component.imp.pkg.version.range}",
                             org.apache.commons.logging;version="${commons-logging.osgi.version.range}",

@@ -23,34 +23,32 @@ Optional — skip this if you already have the JARs.
 mvn clean install
 ```
 
-Produces two bundles under `components/*/target/`:
+Produces one bundle:
 
-| Artifact | |
-|---|---|
-| `org.wso2.carbon.identity.breach.detection.api-<version>.jar` | The `BreachSource` SPI. Connectors compile against this. |
-| `org.wso2.carbon.identity.breach.detection-<version>.jar` | The enforcement point, the engine, and the local blocklist source. |
+```
+components/org.wso2.carbon.identity.breach.detection/target/org.wso2.carbon.identity.breach.detection-<version>.jar
+```
 
-Both are needed. The SPI bundle is separate so a connector can depend on it without dragging in the core.
+It contains the enforcement point, the engine, the local blocklist source, and the `BreachSource` contract
+that connectors implement. Two packages are exported: `org.wso2.carbon.identity.breach.detection` for the
+contract and `...breach.detection.constants` for the error codes. Everything else is private to the bundle.
 
 ## Deploy
 
-### 1. Copy the bundles
+### 1. Copy the bundle
 
-Carbon expects `<symbolic-name>_<osgi-version>.jar` — an underscore before the version, and no `-SNAPSHOT`
-suffix:
+Carbon expects the filename `<symbolic-name>_<osgi-version>.jar`, with an underscore before the version and
+no `-SNAPSHOT` suffix:
 
 ```bash
 IS_HOME=/path/to/wso2is-7.3.0
-
-cp components/org.wso2.carbon.identity.breach.detection.api/target/*-1.0.0-SNAPSHOT.jar \
-   "$IS_HOME/repository/components/dropins/org.wso2.carbon.identity.breach.detection.api_1.0.0.SNAPSHOT.jar"
 
 cp components/org.wso2.carbon.identity.breach.detection/target/org.wso2.carbon.identity.breach.detection-1.0.0-SNAPSHOT.jar \
    "$IS_HOME/repository/components/dropins/org.wso2.carbon.identity.breach.detection_1.0.0.SNAPSHOT.jar"
 ```
 
-Getting the filename wrong is the single most common reason the bundles appear to be ignored — Carbon skips a
-JAR it cannot parse a version out of, silently.
+Carbon skips a JAR it cannot parse a version out of, and it does so without logging anything. A wrong
+filename is the most common reason the bundle appears to be ignored.
 
 ### 2. Supply a blocklist file
 
@@ -123,8 +121,12 @@ A unique password should return **HTTP 201**. If a listed password is accepted, 
 
 ## Adding a breach source connector
 
-Drop the connector's bundle into `dropins` and restart. It registers itself; the core needs no configuration
-edit to discover it, and removing the JAR unbinds it and changes nothing else.
+Drop the connector's bundle into `dropins` and restart. It registers itself, so the core needs no
+configuration edit to discover it, and removing the JAR unbinds it and changes nothing else.
+
+A connector compiles against this bundle and imports `org.wso2.carbon.identity.breach.detection` at
+`[1.0.0, 2.0.0)`. That package carries the contract's own version, not the repository's release number, so a
+release that does not change the contract does not invalidate a connector built against it.
 
 [identity-password-validator-hibp](https://github.com/wso2-extensions/identity-password-validator-hibp) is the
 reference connector — Have I Been Pwned, checked without the password leaving the deployment.

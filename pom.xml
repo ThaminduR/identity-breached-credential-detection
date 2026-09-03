@@ -37,7 +37,6 @@
     <url>http://wso2.org</url>
 
     <modules>
-        <module>components/org.wso2.carbon.identity.breach.detection.api</module>
         <module>components/org.wso2.carbon.identity.breach.detection</module>
         <module>features/org.wso2.carbon.identity.breach.detection.server.feature</module>
     </modules>
@@ -57,11 +56,6 @@
 
     <dependencyManagement>
         <dependencies>
-            <dependency>
-                <groupId>org.wso2.carbon.identity.breach</groupId>
-                <artifactId>org.wso2.carbon.identity.breach.detection.api</artifactId>
-                <version>${project.version}</version>
-            </dependency>
             <dependency>
                 <groupId>org.wso2.carbon</groupId>
                 <artifactId>org.wso2.carbon.user.core</artifactId>

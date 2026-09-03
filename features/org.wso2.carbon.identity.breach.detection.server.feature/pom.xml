@@ -37,10 +37,6 @@
     <dependencies>
         <dependency>
             <groupId>org.wso2.carbon.identity.breach</groupId>
-            <artifactId>org.wso2.carbon.identity.breach.detection.api</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.wso2.carbon.identity.breach</groupId>
             <artifactId>org.wso2.carbon.identity.breach.detection</artifactId>
             <version>${project.version}</version>
         </dependency>
@@ -68,7 +64,6 @@
                                 </properties>
                             </adviceFile>
                             <bundles>
-                                <bundleDef>org.wso2.carbon.identity.breach:org.wso2.carbon.identity.breach.detection.api</bundleDef>
                                 <bundleDef>org.wso2.carbon.identity.breach:org.wso2.carbon.identity.breach.detection</bundleDef>
                             </bundles>
                             <importFeatures>

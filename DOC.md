@@ -16,8 +16,8 @@ For building and deploying the bundles, see [README.md](README.md).
 ## Prerequisites
 
 - WSO2 Identity Server 7.3.0 or later.
-- The `org.wso2.carbon.identity.breach.detection.api` and `org.wso2.carbon.identity.breach.detection` bundles
-  deployed to `<IS_HOME>/repository/components/dropins`. See [README.md](README.md#deploy).
+- The `org.wso2.carbon.identity.breach.detection` bundle deployed to
+  `<IS_HOME>/repository/components/dropins`. See [README.md](README.md#deploy).
 
 ## How it works
 
