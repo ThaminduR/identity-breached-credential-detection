@@ -63,31 +63,28 @@ public enum BlocklistFormat {
 
     public boolean isHashed() {
 
-        return this == SHA1 || this == SHA256;
+        return hexLength > 0;
     }
 
     /**
+     * The accepted values are exactly the ones the documentation lists. There are no aliases, so a value
+     * that is not one of them leaves the source unconfigured rather than resolving to a near match.
+     *
      * @param value the configured value.
-     * @return the format, or {@code null} when nothing recognisable was configured.
+     * @return the format, or {@code null} when the value is not one of the accepted ones.
      */
     public static BlocklistFormat from(String value) {
 
         if (value == null) {
             return null;
         }
-        switch (value.trim().toLowerCase(Locale.ROOT)) {
-            case "sha1":
-            case "sha-1":
-                return SHA1;
-            case "sha256":
-            case "sha-256":
-                return SHA256;
-            case "plaintext":
-            case "plain":
-                return PLAINTEXT;
-            default:
-                return null;
+        String normalized = value.trim().toLowerCase(Locale.ROOT);
+        for (BlocklistFormat format : values()) {
+            if (format.configValue.equals(normalized)) {
+                return format;
+            }
         }
+        return null;
     }
 
     /**

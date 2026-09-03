@@ -20,7 +20,6 @@ package org.wso2.carbon.identity.breach.detection.internal;
 
 import org.wso2.carbon.identity.breach.detection.engine.BreachEvaluationEngine;
 import org.wso2.carbon.identity.breach.detection.engine.SourceRegistry;
-import org.wso2.carbon.identity.breach.detection.source.LocalBlocklistSource;
 
 /**
  * Holds the shared instances so that the listener and the component use the same engine and registry.
@@ -32,7 +31,6 @@ public class BreachDetectionDataHolder {
     private final SourceRegistry sourceRegistry = new SourceRegistry();
 
     private BreachEvaluationEngine evaluationEngine;
-    private LocalBlocklistSource localBlocklistSource;
 
     private BreachDetectionDataHolder() {
 
@@ -56,15 +54,5 @@ public class BreachDetectionDataHolder {
     public void setEvaluationEngine(BreachEvaluationEngine evaluationEngine) {
 
         this.evaluationEngine = evaluationEngine;
-    }
-
-    public LocalBlocklistSource getLocalBlocklistSource() {
-
-        return localBlocklistSource;
-    }
-
-    public void setLocalBlocklistSource(LocalBlocklistSource localBlocklistSource) {
-
-        this.localBlocklistSource = localBlocklistSource;
     }
 }

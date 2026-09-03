@@ -68,6 +68,8 @@ public class BreachDetectionServiceComponent {
      */
     private static volatile boolean active;
 
+    private LocalBlocklistSource localBlocklistSource;
+
     @Activate
     protected void activate(ComponentContext context) {
 
@@ -79,8 +81,7 @@ public class BreachDetectionServiceComponent {
 
         holder.setEvaluationEngine(new BreachEvaluationEngine(registry));
 
-        LocalBlocklistSource localBlocklistSource = new LocalBlocklistSource();
-        holder.setLocalBlocklistSource(localBlocklistSource);
+        localBlocklistSource = new LocalBlocklistSource();
 
         // The local list registers as an OSGi service in the same way a connector does, so the bind
         // callback below configures it too.
@@ -127,9 +128,8 @@ public class BreachDetectionServiceComponent {
         registrations.clear();
         active = false;
 
-        BreachDetectionDataHolder holder = BreachDetectionDataHolder.getInstance();
-        if (holder.getLocalBlocklistSource() != null) {
-            holder.getLocalBlocklistSource().shutdown();
+        if (localBlocklistSource != null) {
+            localBlocklistSource.shutdown();
         }
         LOG.info("Breached password detection stopped.");
     }

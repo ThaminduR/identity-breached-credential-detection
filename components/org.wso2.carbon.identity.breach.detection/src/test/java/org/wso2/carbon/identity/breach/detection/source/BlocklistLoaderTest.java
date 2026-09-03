@@ -91,9 +91,11 @@ public class BlocklistLoaderTest {
         assertNull(BlocklistFormat.from(""));
         assertNull(BlocklistFormat.from("auto"));
         assertNull(BlocklistFormat.from("sha-512"));
-        assertEquals(BlocklistFormat.from("SHA-1"), BlocklistFormat.SHA1);
+        assertNull(BlocklistFormat.from("sha-1"), "Only the documented spellings are accepted.");
+        assertNull(BlocklistFormat.from("plain"), "Only the documented spellings are accepted.");
+        assertEquals(BlocklistFormat.from("SHA1"), BlocklistFormat.SHA1);
         assertEquals(BlocklistFormat.from(" sha256 "), BlocklistFormat.SHA256);
-        assertEquals(BlocklistFormat.from("plain"), BlocklistFormat.PLAINTEXT);
+        assertEquals(BlocklistFormat.from("plaintext"), BlocklistFormat.PLAINTEXT);
     }
 
     @Test
