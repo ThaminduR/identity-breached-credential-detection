@@ -19,7 +19,7 @@
 package org.wso2.carbon.identity.breach.source;
 
 /**
- * What a source concluded about a candidate password.
+ * What a source concluded about a candidate password. The whole of a source's answer.
  * <p>
  * {@link #UNAVAILABLE} is not {@link #NOT_FOUND}. A source that could not reach its corpus returns
  * {@code UNAVAILABLE}. Collapsing the two lets enforcement stop silently while the source still reports

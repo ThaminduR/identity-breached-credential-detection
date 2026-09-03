@@ -20,9 +20,8 @@ package org.wso2.carbon.identity.breach.detection.engine;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.wso2.carbon.identity.breach.source.BreachContext;
+import org.wso2.carbon.identity.breach.source.Credential;
 import org.wso2.carbon.identity.breach.source.BreachSource;
-import org.wso2.carbon.identity.breach.source.BreachVerdict;
 import org.wso2.carbon.identity.breach.source.Outcome;
 
 import java.util.ArrayList;
@@ -74,37 +73,38 @@ public class BreachEvaluationEngine {
      * Evaluate a candidate against every source this organization enabled. Clears the credential before
      * returning, unless a source timed out and may still be reading it.
      *
-     * @param context the candidate and the organization it is being set in.
+     * @param credential   the candidate password.
+     * @param tenantDomain the organization the password is being set in.
      * @return what the caller should do.
      */
-    public Decision evaluate(BreachContext context) {
+    public Decision evaluate(Credential credential, String tenantDomain) {
 
-        List<BreachSource> plan = plan(context.getTenantDomain());
+        List<BreachSource> plan = plan(tenantDomain);
         if (plan.isEmpty()) {
             // No source wants to be consulted here, so nothing is being checked. That is a legitimate
             // state - it is what an organization that has not switched anything on looks like.
-            context.getCredential().clear();
+            credential.clear();
             return Decision.ACCEPT;
         }
 
         // Set when a call times out: the worker may still be reading the characters, so they are left to the
         // collector rather than zeroed underneath a call in flight.
         AtomicBoolean credentialInFlight = new AtomicBoolean();
-        List<BreachVerdict> verdicts = new ArrayList<>(plan.size());
+        List<Outcome> outcomes = new ArrayList<>(plan.size());
 
         for (BreachSource source : plan) {
-            BreachVerdict verdict = call(source, idOf(source), context, credentialInFlight);
-            verdicts.add(verdict);
-            if (verdict.getOutcome() == Outcome.FOUND) {
+            Outcome outcome = call(source, idOf(source), credential, tenantDomain, credentialInFlight);
+            outcomes.add(outcome);
+            if (outcome == Outcome.FOUND) {
                 // A match ends it. Nothing after this needs asking, and no network call is worth making.
                 break;
             }
         }
 
         if (!credentialInFlight.get()) {
-            context.getCredential().clear();
+            credential.clear();
         }
-        return resolve(context.getTenantDomain(), plan, verdicts);
+        return resolve(tenantDomain, plan, outcomes);
     }
 
     /**
@@ -136,26 +136,29 @@ public class BreachEvaluationEngine {
         return planned;
     }
 
-    private BreachVerdict call(BreachSource source, String sourceId, BreachContext context,
-                               AtomicBoolean credentialInFlight) {
+    private Outcome call(BreachSource source, String sourceId, Credential credential, String tenantDomain,
+                         AtomicBoolean credentialInFlight) {
 
-        Future<BreachVerdict> future;
+        Future<Outcome> future;
         try {
-            future = executor.submit(() -> invoke(source, context));
+            future = executor.submit(() -> invoke(source, sourceId, credential, tenantDomain));
         } catch (RejectedExecutionException e) {
-            return BreachVerdict.unavailable(sourceId, "evaluation capacity is exhausted");
+            LOG.error("Breach source '" + sourceId + "' was not called: evaluation capacity is exhausted.");
+            return Outcome.UNAVAILABLE;
         }
         try {
             return future.get(timeoutMs, TimeUnit.MILLISECONDS);
         } catch (TimeoutException e) {
             credentialInFlight.set(true);
             future.cancel(true);
-            return BreachVerdict.unavailable(sourceId, "no answer within " + timeoutMs + " ms");
+            LOG.warn("Breach source '" + sourceId + "' did not answer within " + timeoutMs + " ms.");
+            return Outcome.UNAVAILABLE;
         } catch (InterruptedException e) {
             credentialInFlight.set(true);
             Thread.currentThread().interrupt();
             future.cancel(true);
-            return BreachVerdict.unavailable(sourceId, "the evaluation was interrupted");
+            LOG.warn("Evaluation of breach source '" + sourceId + "' was interrupted.");
+            return Outcome.UNAVAILABLE;
         } catch (Exception e) {
             return contain(sourceId, e.getCause() == null ? e : e.getCause());
         }
@@ -173,37 +176,38 @@ public class BreachEvaluationEngine {
         }
     }
 
-    private BreachVerdict invoke(BreachSource source, BreachContext context) {
+    private Outcome invoke(BreachSource source, String sourceId, Credential credential, String tenantDomain) {
 
         try {
-            BreachVerdict verdict = source.evaluate(context);
-            return verdict == null
-                    ? BreachVerdict.unavailable(source.getId(), "the source returned no verdict")
-                    : verdict;
+            Outcome outcome = source.evaluate(credential, tenantDomain);
+            if (outcome == null) {
+                LOG.error("Breach source '" + sourceId + "' returned no outcome.");
+                return Outcome.UNAVAILABLE;
+            }
+            return outcome;
         } catch (Throwable t) {
-            return contain(source.getId(), t);
+            return contain(sourceId, t);
         }
     }
 
-    private BreachVerdict contain(String sourceId, Throwable t) {
+    private Outcome contain(String sourceId, Throwable t) {
 
         // Contained to this source: one connector's defect must not take the others down with it.
         LOG.error("Breach source '" + sourceId + "' failed while evaluating a password. The source is treated "
                 + "as unavailable and the remaining sources are unaffected.", t);
-        return BreachVerdict.unavailable(sourceId, "the source raised " + t.getClass().getSimpleName());
+        return Outcome.UNAVAILABLE;
     }
 
     /**
-     * Resolve the verdicts into one decision. {@code verdicts.get(i)} is the verdict of {@code plan.get(i)},
-     * so the source that produced a verdict is the one asked for its failure action.
+     * Resolve the outcomes into one decision. {@code outcomes.get(i)} came from {@code plan.get(i)}, so the
+     * source that could not answer is the one asked for its failure action.
      */
-    private Decision resolve(String tenantDomain, List<BreachSource> plan, List<BreachVerdict> verdicts) {
+    private Decision resolve(String tenantDomain, List<BreachSource> plan, List<Outcome> outcomes) {
 
         int answered = 0;
         boolean denied = false;
-        for (int i = 0; i < verdicts.size(); i++) {
-            BreachVerdict verdict = verdicts.get(i);
-            switch (verdict.getOutcome()) {
+        for (int i = 0; i < outcomes.size(); i++) {
+            switch (outcomes.get(i)) {
                 case FOUND:
                     return Decision.REFUSE_BREACHED;
                 case NOT_FOUND:
@@ -214,17 +218,32 @@ public class BreachEvaluationEngine {
             }
         }
 
-        int unavailable = verdicts.size() - answered;
+        int unavailable = outcomes.size() - answered;
         if (unavailable > 0 && answered == 0) {
             // The signal that matters most: everything looks healthy from outside while nothing is checked.
             LOG.error("Breached password detection is not enforcing for tenant '" + tenantDomain
-                    + "': no enabled source could return a verdict. Verdicts: " + verdicts);
+                    + "': no enabled source could return a verdict. " + describe(plan, outcomes));
         } else if (unavailable > 0 && LOG.isWarnEnabled()) {
             LOG.warn("Breached password detection is degraded for tenant '" + tenantDomain + "': " + unavailable
-                    + " of " + verdicts.size() + " sources could not answer.");
+                    + " of " + outcomes.size() + " sources could not answer. " + describe(plan, outcomes));
         }
 
         return denied ? Decision.REFUSE_UNVERIFIED : Decision.ACCEPT;
+    }
+
+    /**
+     * Which source returned what, for the log. Each source logs its own reason.
+     */
+    private static String describe(List<BreachSource> plan, List<Outcome> outcomes) {
+
+        StringBuilder text = new StringBuilder("Outcomes: ");
+        for (int i = 0; i < outcomes.size(); i++) {
+            if (i > 0) {
+                text.append(", ");
+            }
+            text.append(idOf(plan.get(i))).append('=').append(outcomes.get(i));
+        }
+        return text.toString();
     }
 
     private boolean refuses(BreachSource source, String tenantDomain) {

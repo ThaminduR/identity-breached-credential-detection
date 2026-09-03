@@ -20,8 +20,7 @@ package org.wso2.carbon.identity.breach.detection.engine;
 
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
-import org.wso2.carbon.identity.breach.source.BreachContext;
-import org.wso2.carbon.identity.breach.source.BreachVerdict;
+import org.wso2.carbon.identity.breach.source.Outcome;
 import org.wso2.carbon.identity.breach.source.Credential;
 
 import static org.testng.Assert.assertEquals;
@@ -51,10 +50,10 @@ public class BreachEvaluationEngineTest {
     public void aSourceThatIsNotEnabledIsNeverConsulted() {
 
         StubBreachSource local = StubBreachSource.source("localList", 100,
-                c -> BreachVerdict.found("localList")).disabled();
+                c -> Outcome.FOUND).disabled();
         registry.bind(local);
 
-        Decision result = engine.evaluate(context());
+        Decision result = engine.evaluate(candidate(), TENANT);
 
         assertEquals(result, Decision.ACCEPT);
         assertEquals(local.getCalls(), 0);
@@ -67,16 +66,16 @@ public class BreachEvaluationEngineTest {
     @Test
     public void nothingEnabledMeansTheCapabilityIsSimplyOff() {
 
-        assertEquals(engine.evaluate(context()), Decision.ACCEPT);
+        assertEquals(engine.evaluate(candidate(), TENANT), Decision.ACCEPT);
     }
 
     @Test
     public void anyFoundRefusesAsBreached() {
 
-        registry.bind(StubBreachSource.source("localList", 100, c -> BreachVerdict.notFound("localList")));
-        registry.bind(StubBreachSource.source("hibp", 500, c -> BreachVerdict.found("hibp")));
+        registry.bind(StubBreachSource.source("localList", 100, c -> Outcome.NOT_FOUND));
+        registry.bind(StubBreachSource.source("hibp", 500, c -> Outcome.FOUND));
 
-        Decision result = engine.evaluate(context());
+        Decision result = engine.evaluate(candidate(), TENANT);
 
         assertEquals(result, Decision.REFUSE_BREACHED);
     }
@@ -84,10 +83,10 @@ public class BreachEvaluationEngineTest {
     @Test
     public void allNotFoundAccepts() {
 
-        registry.bind(StubBreachSource.source("localList", 100, c -> BreachVerdict.notFound("localList")));
-        registry.bind(StubBreachSource.source("hibp", 500, c -> BreachVerdict.notFound("hibp")));
+        registry.bind(StubBreachSource.source("localList", 100, c -> Outcome.NOT_FOUND));
+        registry.bind(StubBreachSource.source("hibp", 500, c -> Outcome.NOT_FOUND));
 
-        Decision result = engine.evaluate(context());
+        Decision result = engine.evaluate(candidate(), TENANT);
 
         assertEquals(result, Decision.ACCEPT);
     }
@@ -95,12 +94,12 @@ public class BreachEvaluationEngineTest {
     @Test
     public void aSourceThatCannotAnswerAndAllowsIsAcceptedAndReportedDegraded() {
 
-        registry.bind(StubBreachSource.source("localList", 100, c -> BreachVerdict.notFound("localList")));
+        registry.bind(StubBreachSource.source("localList", 100, c -> Outcome.NOT_FOUND));
         registry.bind(StubBreachSource.source("hibp", 500,
-                c -> BreachVerdict.unavailable("hibp", "down"))
+                c -> Outcome.UNAVAILABLE)
                 );
 
-        Decision result = engine.evaluate(context());
+        Decision result = engine.evaluate(candidate(), TENANT);
 
         assertEquals(result, Decision.ACCEPT);
     }
@@ -108,12 +107,12 @@ public class BreachEvaluationEngineTest {
     @Test
     public void aSourceThatCannotAnswerAndDeniesRefusesAsUnverified() {
 
-        registry.bind(StubBreachSource.source("localList", 100, c -> BreachVerdict.notFound("localList")));
+        registry.bind(StubBreachSource.source("localList", 100, c -> Outcome.NOT_FOUND));
         registry.bind(StubBreachSource.source("hibp", 500,
-                c -> BreachVerdict.unavailable("hibp", "down"))
+                c -> Outcome.UNAVAILABLE)
                 .refusing());
 
-        Decision result = engine.evaluate(context());
+        Decision result = engine.evaluate(candidate(), TENANT);
 
         assertEquals(result, Decision.REFUSE_UNVERIFIED);
     }
@@ -122,10 +121,10 @@ public class BreachEvaluationEngineTest {
     public void everySourceUnavailableWithAllowAcceptsButIsNotEnforcing() {
 
         registry.bind(StubBreachSource.source("hibp", 500,
-                c -> BreachVerdict.unavailable("hibp", "slow"))
+                c -> Outcome.UNAVAILABLE)
                 );
 
-        Decision result = engine.evaluate(context());
+        Decision result = engine.evaluate(candidate(), TENANT);
 
         assertEquals(result, Decision.ACCEPT);
     }
@@ -135,12 +134,12 @@ public class BreachEvaluationEngineTest {
     public void theCheapSourceRunsFirstAndAMatchStopsTheRest() {
 
         StubBreachSource local = StubBreachSource.source("localList", 100,
-                c -> BreachVerdict.found("localList"));
-        StubBreachSource remote = StubBreachSource.source("hibp", 500, c -> BreachVerdict.notFound("hibp"));
+                c -> Outcome.FOUND);
+        StubBreachSource remote = StubBreachSource.source("hibp", 500, c -> Outcome.NOT_FOUND);
         registry.bind(remote);
         registry.bind(local);
 
-        Decision result = engine.evaluate(context());
+        Decision result = engine.evaluate(candidate(), TENANT);
 
         assertEquals(result, Decision.REFUSE_BREACHED);
         assertEquals(local.getCalls(), 1);
@@ -151,13 +150,13 @@ public class BreachEvaluationEngineTest {
     public void anErrorInsideOneSourceIsContainedToThatSource() {
 
         StubBreachSource broken = StubBreachSource.source("broken", 100,
-                c -> BreachVerdict.notFound("broken")).throwing(new IllegalStateException("connector defect"));
+                c -> Outcome.NOT_FOUND).throwing(new IllegalStateException("connector defect"));
         StubBreachSource healthy = StubBreachSource.source("healthy", 200,
-                c -> BreachVerdict.found("healthy"));
+                c -> Outcome.FOUND);
         registry.bind(broken);
         registry.bind(healthy);
 
-        Decision result = engine.evaluate(context());
+        Decision result = engine.evaluate(candidate(), TENANT);
 
         assertEquals(result, Decision.REFUSE_BREACHED);
         assertEquals(healthy.getCalls(), 1);
@@ -166,11 +165,11 @@ public class BreachEvaluationEngineTest {
     @Test
     public void aSourceThatCannotSayWhetherItIsEnabledIsSkippedRatherThanFailingTheWrite() {
 
-        registry.bind(StubBreachSource.source("broken", 100, c -> BreachVerdict.found("broken"))
+        registry.bind(StubBreachSource.source("broken", 100, c -> Outcome.FOUND)
                 .brokenIsEnabled(new IllegalStateException("configuration store down")));
-        registry.bind(StubBreachSource.source("healthy", 200, c -> BreachVerdict.notFound("healthy")));
+        registry.bind(StubBreachSource.source("healthy", 200, c -> Outcome.NOT_FOUND));
 
-        Decision result = engine.evaluate(context());
+        Decision result = engine.evaluate(candidate(), TENANT);
 
         assertEquals(result, Decision.ACCEPT);
     }
@@ -178,11 +177,11 @@ public class BreachEvaluationEngineTest {
     @Test
     public void aRemoteSourceThatOverrunsItsBudgetIsUnavailableNotClean() {
 
-        registry.bind(StubBreachSource.source("slow", 500, c -> BreachVerdict.notFound("slow"))
+        registry.bind(StubBreachSource.source("slow", 500, c -> Outcome.NOT_FOUND)
                 .slow(2000).refusing());
 
         long started = System.currentTimeMillis();
-        Decision result = engine.evaluate(context());
+        Decision result = engine.evaluate(candidate(), TENANT);
         long elapsed = System.currentTimeMillis() - started;
 
         assertEquals(result, Decision.REFUSE_UNVERIFIED);
@@ -192,27 +191,27 @@ public class BreachEvaluationEngineTest {
     @Test
     public void theCredentialIsClearedOnceEverySourceHasAnswered() {
 
-        registry.bind(StubBreachSource.source("localList", 100, c -> BreachVerdict.notFound("localList")));
-        BreachContext context = context();
+        registry.bind(StubBreachSource.source("localList", 100, c -> Outcome.NOT_FOUND));
+        Credential candidate = candidate();
 
-        engine.evaluate(context);
+        engine.evaluate(candidate, TENANT);
 
-        assertTrue(context.getCredential().isCleared());
+        assertTrue(candidate.isCleared());
     }
 
     @Test
     public void aTimedOutCallLeavesTheCredentialAloneRatherThanCorruptingIt() {
 
-        registry.bind(StubBreachSource.source("slow", 500, c -> BreachVerdict.notFound("slow")).slow(2000));
-        BreachContext context = context();
+        registry.bind(StubBreachSource.source("slow", 500, c -> Outcome.NOT_FOUND).slow(2000));
+        Credential candidate = candidate();
 
-        engine.evaluate(context);
+        engine.evaluate(candidate, TENANT);
 
-        assertTrue(!context.getCredential().isCleared());
+        assertTrue(!candidate.isCleared());
     }
 
-    private BreachContext context() {
+    private Credential candidate() {
 
-        return new BreachContext(new Credential("Password@1".toCharArray()), TENANT);
+        return new Credential("Password@1".toCharArray());
     }
 }

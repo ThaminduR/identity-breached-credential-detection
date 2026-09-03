@@ -26,7 +26,6 @@ import org.wso2.carbon.identity.breach.detection.engine.BreachEvaluationEngine;
 import org.wso2.carbon.identity.breach.detection.engine.Decision;
 import org.wso2.carbon.identity.breach.detection.internal.BreachDetectionDataHolder;
 import org.wso2.carbon.identity.breach.detection.util.BreachDetectionUtils;
-import org.wso2.carbon.identity.breach.source.BreachContext;
 import org.wso2.carbon.identity.breach.source.Credential;
 import org.wso2.carbon.identity.core.AbstractIdentityUserOperationEventListener;
 import org.wso2.carbon.identity.core.context.IdentityContext;
@@ -126,13 +125,12 @@ public class BreachDetectionListener extends AbstractIdentityUserOperationEventL
 
         // A copy, so clearing it after evaluation cannot corrupt the write that follows.
         Credential candidate = new Credential(Arrays.copyOf(chars, chars.length));
-        BreachContext context = new BreachContext(candidate, resolveTenantDomain(userStoreManager));
 
         // The engine owns the copy from here: it clears it before returning, or leaves it to the collector
         // when a source timed out and may still be reading it.
         Decision decision;
         try {
-            decision = engine.evaluate(context);
+            decision = engine.evaluate(candidate, resolveTenantDomain(userStoreManager));
         } catch (Throwable t) {
             candidate.clear();
             // A defect in our own engine is a server fault, and must not masquerade as a policy decision.

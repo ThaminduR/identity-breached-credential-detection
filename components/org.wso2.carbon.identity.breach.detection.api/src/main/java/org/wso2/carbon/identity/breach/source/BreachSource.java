@@ -69,12 +69,13 @@ public interface BreachSource {
     /**
      * Reach a verdict on the candidate password.
      * <p>
-     * Return {@link Outcome#UNAVAILABLE} for anything that is not a positive determination. Never return
-     * {@link Outcome#NOT_FOUND} because a call failed. Never log, cache or transmit the credential, and do
-     * not retain it past this call.
+     * Return {@link Outcome#UNAVAILABLE} for anything that is not a positive determination, and log why.
+     * Never return {@link Outcome#NOT_FOUND} because a call failed. Never log, cache or transmit the
+     * credential, and do not retain it past this call.
      *
-     * @param context the candidate password and the organization it is being set in.
-     * @return the verdict.
+     * @param credential   the candidate password. Do not retain it past this call.
+     * @param tenantDomain the organization the password is being set in.
+     * @return what this source concluded.
      */
-    BreachVerdict evaluate(BreachContext context);
+    Outcome evaluate(Credential credential, String tenantDomain);
 }

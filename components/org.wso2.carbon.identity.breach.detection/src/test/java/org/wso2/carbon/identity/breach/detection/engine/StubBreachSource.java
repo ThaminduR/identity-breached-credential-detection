@@ -18,9 +18,9 @@
 
 package org.wso2.carbon.identity.breach.detection.engine;
 
-import org.wso2.carbon.identity.breach.source.BreachContext;
+import org.wso2.carbon.identity.breach.source.Credential;
 import org.wso2.carbon.identity.breach.source.BreachSource;
-import org.wso2.carbon.identity.breach.source.BreachVerdict;
+import org.wso2.carbon.identity.breach.source.Outcome;
 import org.wso2.carbon.identity.breach.source.PropertyDescriptor;
 import org.wso2.carbon.identity.breach.source.SourceConfiguration;
 
@@ -36,7 +36,7 @@ class StubBreachSource implements BreachSource {
 
     private final String id;
     private final int priority;
-    private final Function<BreachContext, BreachVerdict> answer;
+    private final Function<Credential, Outcome> answer;
     private final AtomicInteger calls = new AtomicInteger();
 
     private boolean enabled = true;
@@ -45,14 +45,14 @@ class StubBreachSource implements BreachSource {
     private RuntimeException failure;
     private long delayMillis;
 
-    private StubBreachSource(String id, int priority, Function<BreachContext, BreachVerdict> answer) {
+    private StubBreachSource(String id, int priority, Function<Credential, Outcome> answer) {
 
         this.id = id;
         this.priority = priority;
         this.answer = answer;
     }
 
-    static StubBreachSource source(String id, int priority, Function<BreachContext, BreachVerdict> answer) {
+    static StubBreachSource source(String id, int priority, Function<Credential, Outcome> answer) {
 
         return new StubBreachSource(id, priority, answer);
     }
@@ -134,7 +134,7 @@ class StubBreachSource implements BreachSource {
     }
 
     @Override
-    public BreachVerdict evaluate(BreachContext context) {
+    public Outcome evaluate(Credential credential, String tenantDomain) {
 
         calls.incrementAndGet();
         if (delayMillis > 0) {
@@ -152,6 +152,6 @@ class StubBreachSource implements BreachSource {
         if (failure != null) {
             throw failure;
         }
-        return answer.apply(context);
+        return answer.apply(credential);
     }
 }

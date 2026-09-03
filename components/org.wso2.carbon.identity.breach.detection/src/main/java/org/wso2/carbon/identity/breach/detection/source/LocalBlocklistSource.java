@@ -21,9 +21,9 @@ package org.wso2.carbon.identity.breach.detection.source;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.breach.detection.constants.BreachDetectionConstants;
-import org.wso2.carbon.identity.breach.source.BreachContext;
 import org.wso2.carbon.identity.breach.source.BreachSource;
-import org.wso2.carbon.identity.breach.source.BreachVerdict;
+import org.wso2.carbon.identity.breach.source.Credential;
+import org.wso2.carbon.identity.breach.source.Outcome;
 import org.wso2.carbon.identity.breach.source.PropertyDescriptor;
 import org.wso2.carbon.identity.breach.source.SourceConfiguration;
 
@@ -148,15 +148,15 @@ public class LocalBlocklistSource implements BreachSource {
     }
 
     @Override
-    public BreachVerdict evaluate(BreachContext context) {
+    public Outcome evaluate(Credential credential, String tenantDomain) {
 
         BlocklistSnapshot current = snapshot.get();
         if (current == null) {
-            // Not being able to check is not the same as finding nothing, and is never reported as if it were.
-            return BreachVerdict.unavailable(getId(), "no blocklist is loaded");
+            // Not reached through the engine: isEnabled reports false without a snapshot.
+            return Outcome.UNAVAILABLE;
         }
-        String digest = context.getCredential().digestHex(current.getFormat().getDigestAlgorithm());
-        return current.contains(digest) ? BreachVerdict.found(getId()) : BreachVerdict.notFound(getId());
+        String digest = credential.digestHex(current.getFormat().getDigestAlgorithm());
+        return current.contains(digest) ? Outcome.FOUND : Outcome.NOT_FOUND;
     }
 
     /**

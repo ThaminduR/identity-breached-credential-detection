@@ -19,7 +19,6 @@
 package org.wso2.carbon.identity.breach.detection.source;
 
 import org.testng.annotations.Test;
-import org.wso2.carbon.identity.breach.source.BreachContext;
 import org.wso2.carbon.identity.breach.source.Credential;
 import org.wso2.carbon.identity.breach.source.Outcome;
 
@@ -55,8 +54,8 @@ public class LocalBlocklistSourceTest {
 
         LocalBlocklistSource source = configured(write(Arrays.asList("Password@1", "Qwerty@123")), "plaintext");
 
-        assertEquals(source.evaluate(context("Password@1")).getOutcome(), Outcome.FOUND);
-        assertEquals(source.evaluate(context("Zx9q!Kt7#Lm2vRb4")).getOutcome(), Outcome.NOT_FOUND);
+        assertEquals(source.evaluate(candidate("Password@1"), TENANT), Outcome.FOUND);
+        assertEquals(source.evaluate(candidate("Zx9q!Kt7#Lm2vRb4"), TENANT), Outcome.NOT_FOUND);
         source.shutdown();
     }
 
@@ -70,8 +69,8 @@ public class LocalBlocklistSourceTest {
         String digest = BlocklistLoader.digestOf("Password@1", "SHA-1");
         LocalBlocklistSource source = configured(write(Collections.singletonList(digest)), "sha1");
 
-        assertEquals(source.evaluate(context("Password@1")).getOutcome(), Outcome.FOUND);
-        assertEquals(source.evaluate(context("Password@2")).getOutcome(), Outcome.NOT_FOUND);
+        assertEquals(source.evaluate(candidate("Password@1"), TENANT), Outcome.FOUND);
+        assertEquals(source.evaluate(candidate("Password@2"), TENANT), Outcome.NOT_FOUND);
         source.shutdown();
     }
 
@@ -82,8 +81,7 @@ public class LocalBlocklistSourceTest {
         source.configure(new MapSourceConfiguration());
 
         assertFalse(source.isEnabled(TENANT));
-        assertEquals(source.evaluate(context("Password@1")).getOutcome(), Outcome.UNAVAILABLE);
-        assertTrue(source.evaluate(context("Password@1")).toString().contains("no blocklist is loaded"));
+        assertEquals(source.evaluate(candidate("Password@1"), TENANT), Outcome.UNAVAILABLE);
         source.shutdown();
     }
 
@@ -114,7 +112,7 @@ public class LocalBlocklistSourceTest {
                 .set(LocalBlocklistSource.PROPERTY_FORMAT, "plaintext"));
 
         assertFalse(source.isEnabled(TENANT));
-        assertEquals(source.evaluate(context("Password@1")).getOutcome(), Outcome.UNAVAILABLE);
+        assertEquals(source.evaluate(candidate("Password@1"), TENANT), Outcome.UNAVAILABLE);
         source.shutdown();
     }
 
@@ -141,7 +139,7 @@ public class LocalBlocklistSourceTest {
                 .set(LocalBlocklistSource.PROPERTY_PATH, file.toString())
                 .set(LocalBlocklistSource.PROPERTY_FORMAT, "sha1"));
 
-        assertEquals(source.evaluate(context("Password@1")).getOutcome(), Outcome.FOUND,
+        assertEquals(source.evaluate(candidate("Password@1"), TENANT), Outcome.FOUND,
                 "The previous list must stay in effect rather than emptying itself.");
         source.shutdown();
     }
@@ -155,9 +153,9 @@ public class LocalBlocklistSourceTest {
         return source;
     }
 
-    private BreachContext context(String password) {
+    private Credential candidate(String password) {
 
-        return new BreachContext(new Credential(password.toCharArray()), TENANT);
+        return new Credential(password.toCharArray());
     }
 
     private static Path write(List<String> lines) throws IOException {
