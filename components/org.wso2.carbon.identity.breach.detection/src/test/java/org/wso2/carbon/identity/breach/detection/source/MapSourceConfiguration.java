@@ -49,11 +49,6 @@ class MapSourceConfiguration implements SourceConfiguration {
         return getString(name).map(Integer::parseInt).orElse(defaultValue);
     }
 
-    @Override
-    public long getLong(String name, long defaultValue) {
-
-        return getString(name).map(Long::parseLong).orElse(defaultValue);
-    }
 
     @Override
     public boolean getBoolean(String name, boolean defaultValue) {

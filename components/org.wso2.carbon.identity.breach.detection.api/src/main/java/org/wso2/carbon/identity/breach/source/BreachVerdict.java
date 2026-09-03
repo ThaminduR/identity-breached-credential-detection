@@ -18,10 +18,12 @@
 
 package org.wso2.carbon.identity.breach.source;
 
-import java.util.Optional;
 
 /**
  * What one source concluded, and why when it could not conclude anything.
+ * <p>
+ * The engine branches on the outcome. The source id, cause and detail exist for {@link #toString()}, which is
+ * what the not-enforcing log prints, so an operator can see why each source failed.
  * <p>
  * Carries no occurrence count. A count is never shown to a user, and nothing else needs one.
  */
@@ -81,29 +83,15 @@ public final class BreachVerdict {
         return outcome;
     }
 
-    public String getSourceId() {
-
-        return sourceId;
-    }
 
 
-    public Optional<UnavailableCause> getCause() {
 
-        return Optional.ofNullable(cause);
-    }
-
-    /**
-     * @return operator-facing detail; never contains any part of the candidate password.
-     */
-    public Optional<String> getDetail() {
-
-        return Optional.ofNullable(detail);
-    }
 
     @Override
     public String toString() {
 
         return "BreachVerdict{sourceId=" + sourceId + ", outcome=" + outcome
-                + (cause == null ? "" : ", cause=" + cause) + '}';
+                + (cause == null ? "" : ", cause=" + cause)
+                + (detail == null ? "" : ", detail=" + detail) + '}';
     }
 }

@@ -35,14 +35,15 @@ public class BreachVerdictTest {
 
         BreachVerdict verdict = BreachVerdict.unavailable("hibp", UnavailableCause.TIMEOUT, "no answer");
         assertEquals(verdict.getOutcome(), Outcome.UNAVAILABLE);
-        assertEquals(verdict.getCause().orElse(null), UnavailableCause.TIMEOUT);
+        // The cause and detail reach an operator only through toString, which the not-enforcing log prints.
+        assertTrue(verdict.toString().contains("TIMEOUT"));
+        assertTrue(verdict.toString().contains("no answer"));
     }
 
     @Test
     public void anUnavailableVerdictWithNoCauseStillHasOne() {
 
-        assertEquals(BreachVerdict.unavailable("x", null, null).getCause().orElse(null),
-                UnavailableCause.INTERNAL);
+        assertTrue(BreachVerdict.unavailable("x", null, null).toString().contains("INTERNAL"));
     }
 
     @Test
@@ -50,7 +51,7 @@ public class BreachVerdictTest {
 
         BreachVerdict verdict = BreachVerdict.notFound("localList");
         assertEquals(verdict.getOutcome(), Outcome.NOT_FOUND);
-        assertFalse(verdict.getCause().isPresent());
+        assertFalse(verdict.toString().contains("cause"));
     }
 
     @Test

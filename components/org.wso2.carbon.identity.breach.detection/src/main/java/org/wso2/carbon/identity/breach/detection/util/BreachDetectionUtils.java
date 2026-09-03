@@ -88,22 +88,6 @@ public class BreachDetectionUtils {
         }
     }
 
-    /**
-     * @param value a configured value.
-     * @param fallback value to use when unset or unparseable.
-     * @return the parsed long.
-     */
-    public static long parseLong(String value, long fallback) {
-
-        if (value == null || value.trim().isEmpty()) {
-            return fallback;
-        }
-        try {
-            return Long.parseLong(value.trim());
-        } catch (NumberFormatException e) {
-            return fallback;
-        }
-    }
 
     /**
      * @param value a configured value.

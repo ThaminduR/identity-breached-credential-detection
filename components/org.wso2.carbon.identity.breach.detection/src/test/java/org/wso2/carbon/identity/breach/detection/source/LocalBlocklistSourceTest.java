@@ -22,7 +22,6 @@ import org.testng.annotations.Test;
 import org.wso2.carbon.identity.breach.source.BreachContext;
 import org.wso2.carbon.identity.breach.source.Credential;
 import org.wso2.carbon.identity.breach.source.Outcome;
-import org.wso2.carbon.identity.breach.source.UnavailableCause;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -84,8 +83,7 @@ public class LocalBlocklistSourceTest {
 
         assertFalse(source.isEnabled(TENANT));
         assertEquals(source.evaluate(context("Password@1")).getOutcome(), Outcome.UNAVAILABLE);
-        assertEquals(source.evaluate(context("Password@1")).getCause().orElse(null),
-                UnavailableCause.MISCONFIGURED);
+        assertTrue(source.evaluate(context("Password@1")).toString().contains("MISCONFIGURED"));
         source.shutdown();
     }
 

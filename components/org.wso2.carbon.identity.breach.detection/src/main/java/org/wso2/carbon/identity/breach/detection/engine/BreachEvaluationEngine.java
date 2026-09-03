@@ -210,7 +210,7 @@ public class BreachEvaluationEngine {
     private Decision resolve(String tenantDomain, List<BreachSource> plan, List<BreachVerdict> verdicts) {
 
         int answered = 0;
-        String denyingSource = null;
+        boolean denied = false;
         for (int i = 0; i < verdicts.size(); i++) {
             BreachVerdict verdict = verdicts.get(i);
             switch (verdict.getOutcome()) {
@@ -220,10 +220,7 @@ public class BreachEvaluationEngine {
                     answered++;
                     break;
                 default:
-                    if (denyingSource == null
-                            && failureActionOf(plan.get(i), tenantDomain) == FailureAction.DENY) {
-                        denyingSource = verdict.getSourceId();
-                    }
+                    denied = denied || failureActionOf(plan.get(i), tenantDomain) == FailureAction.DENY;
             }
         }
 
@@ -237,7 +234,7 @@ public class BreachEvaluationEngine {
                     + " of " + verdicts.size() + " sources could not answer.");
         }
 
-        return denyingSource == null ? Decision.ACCEPT : Decision.REFUSE_UNVERIFIED;
+        return denied ? Decision.REFUSE_UNVERIFIED : Decision.ACCEPT;
     }
 
     private FailureAction failureActionOf(BreachSource source, String tenantDomain) {

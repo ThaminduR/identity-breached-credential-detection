@@ -41,12 +41,6 @@ public interface SourceConfiguration {
      */
     int getInt(String name, int defaultValue);
 
-    /**
-     * @param name         declared property name.
-     * @param defaultValue value to use when unset or unparseable.
-     * @return the resolved long.
-     */
-    long getLong(String name, long defaultValue);
 
     /**
      * @param name         declared property name.
