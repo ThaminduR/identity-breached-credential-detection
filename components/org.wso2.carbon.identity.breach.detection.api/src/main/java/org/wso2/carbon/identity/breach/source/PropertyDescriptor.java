@@ -24,7 +24,7 @@ import java.util.Optional;
  * One deployment setting a source needs.
  * <p>
  * The connector declares its settings and the core resolves the values, so the connector reads no file and
- * holds no vault handle. That is what makes the {@code secret} flag enforceable by the core.
+ * holds no vault handle. That is what makes {@link #isSecret()} enforceable by the core.
  */
 public final class PropertyDescriptor {
 
@@ -33,33 +33,52 @@ public final class PropertyDescriptor {
     private final boolean secret;
     private final String defaultValue;
 
-    private PropertyDescriptor(Builder builder) {
+    private PropertyDescriptor(String name, boolean required, boolean secret, String defaultValue) {
 
-        this.name = builder.name;
-        this.required = builder.required;
-        this.secret = builder.secret;
-        this.defaultValue = builder.defaultValue;
+        this.name = name;
+        this.required = required;
+        this.secret = secret;
+        this.defaultValue = defaultValue;
     }
 
     /**
-     * @return the setting name, as it appears under {@code [breach_detection.sources.&lt;id&gt;]}.
+     * @param name the setting name.
+     * @return a setting the source cannot work without. Reported at load when it is missing.
      */
+    public static PropertyDescriptor required(String name) {
+
+        return new PropertyDescriptor(name, true, false, null);
+    }
+
+    /**
+     * @param name         the setting name.
+     * @param defaultValue the value used when the operator configures none.
+     * @return an optional setting.
+     */
+    public static PropertyDescriptor optional(String name, String defaultValue) {
+
+        return new PropertyDescriptor(name, false, false, defaultValue);
+    }
+
+    /**
+     * @param name the setting name.
+     * @return a credential, reachable only through {@link SourceConfiguration#getSecret(String)}.
+     */
+    public static PropertyDescriptor secret(String name) {
+
+        return new PropertyDescriptor(name, false, true, null);
+    }
+
     public String getName() {
 
         return name;
     }
 
-    /**
-     * @return {@code true} if the source cannot work without it. Reported at load when it is missing.
-     */
     public boolean isRequired() {
 
         return required;
     }
 
-    /**
-     * @return {@code true} if the value is a credential: vault-resolved, never returned, never logged.
-     */
     public boolean isSecret() {
 
         return secret;
@@ -68,49 +87,5 @@ public final class PropertyDescriptor {
     public Optional<String> getDefaultValue() {
 
         return Optional.ofNullable(defaultValue);
-    }
-
-    public static Builder builder(String name) {
-
-        return new Builder(name);
-    }
-
-    /**
-     * Builder for {@link PropertyDescriptor}.
-     */
-    public static final class Builder {
-
-        private final String name;
-        private boolean required;
-        private boolean secret;
-        private String defaultValue;
-
-        private Builder(String name) {
-
-            this.name = name;
-        }
-
-        public Builder required(boolean required) {
-
-            this.required = required;
-            return this;
-        }
-
-        public Builder secret(boolean secret) {
-
-            this.secret = secret;
-            return this;
-        }
-
-        public Builder defaultValue(String defaultValue) {
-
-            this.defaultValue = defaultValue;
-            return this;
-        }
-
-        public PropertyDescriptor build() {
-
-            return new PropertyDescriptor(this);
-        }
     }
 }

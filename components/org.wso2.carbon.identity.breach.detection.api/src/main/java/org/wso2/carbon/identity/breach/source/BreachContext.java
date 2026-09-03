@@ -19,20 +19,17 @@
 package org.wso2.carbon.identity.breach.source;
 
 /**
- * What a source is given to reach a verdict: the candidate password, and the organization it is being set in.
- * <p>
- * A builder rather than a constructor so the context can gain fields - a subject, the kind of operation - as
- * something needs them, without breaking a connector compiled against an earlier revision.
+ * What a source is given to reach a verdict.
  */
 public final class BreachContext {
 
     private final Credential credential;
     private final String tenantDomain;
 
-    private BreachContext(Builder builder) {
+    public BreachContext(Credential credential, String tenantDomain) {
 
-        this.credential = builder.credential;
-        this.tenantDomain = builder.tenantDomain;
+        this.credential = credential;
+        this.tenantDomain = tenantDomain;
     }
 
     public Credential getCredential() {
@@ -43,40 +40,5 @@ public final class BreachContext {
     public String getTenantDomain() {
 
         return tenantDomain;
-    }
-
-    public static Builder builder() {
-
-        return new Builder();
-    }
-
-    /**
-     * Builder for {@link BreachContext}.
-     */
-    public static final class Builder {
-
-        private Credential credential;
-        private String tenantDomain;
-
-        private Builder() {
-
-        }
-
-        public Builder credential(Credential credential) {
-
-            this.credential = credential;
-            return this;
-        }
-
-        public Builder tenantDomain(String tenantDomain) {
-
-            this.tenantDomain = tenantDomain;
-            return this;
-        }
-
-        public BreachContext build() {
-
-            return new BreachContext(this);
-        }
     }
 }

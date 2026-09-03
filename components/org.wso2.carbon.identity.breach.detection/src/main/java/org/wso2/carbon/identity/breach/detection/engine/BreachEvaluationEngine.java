@@ -22,11 +22,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.breach.source.BreachContext;
 import org.wso2.carbon.identity.breach.source.BreachSource;
-import org.wso2.carbon.identity.breach.source.BreachSourceException;
 import org.wso2.carbon.identity.breach.source.BreachVerdict;
-import org.wso2.carbon.identity.breach.source.FailureAction;
 import org.wso2.carbon.identity.breach.source.Outcome;
-import org.wso2.carbon.identity.breach.source.UnavailableCause;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -146,22 +143,19 @@ public class BreachEvaluationEngine {
         try {
             future = executor.submit(() -> invoke(source, context));
         } catch (RejectedExecutionException e) {
-            return BreachVerdict.unavailable(sourceId, UnavailableCause.INTERNAL,
-                    "Evaluation capacity is exhausted.");
+            return BreachVerdict.unavailable(sourceId, "evaluation capacity is exhausted");
         }
         try {
             return future.get(timeoutMs, TimeUnit.MILLISECONDS);
         } catch (TimeoutException e) {
             credentialInFlight.set(true);
             future.cancel(true);
-            return BreachVerdict.unavailable(sourceId, UnavailableCause.TIMEOUT,
-                    "The source did not answer within " + timeoutMs + " ms.");
+            return BreachVerdict.unavailable(sourceId, "no answer within " + timeoutMs + " ms");
         } catch (InterruptedException e) {
             credentialInFlight.set(true);
             Thread.currentThread().interrupt();
             future.cancel(true);
-            return BreachVerdict.unavailable(sourceId, UnavailableCause.INTERNAL,
-                    "The evaluation was interrupted.");
+            return BreachVerdict.unavailable(sourceId, "the evaluation was interrupted");
         } catch (Exception e) {
             return contain(sourceId, e.getCause() == null ? e : e.getCause());
         }
@@ -184,11 +178,8 @@ public class BreachEvaluationEngine {
         try {
             BreachVerdict verdict = source.evaluate(context);
             return verdict == null
-                    ? BreachVerdict.unavailable(source.getId(), UnavailableCause.INTERNAL,
-                            "The source returned no verdict.")
+                    ? BreachVerdict.unavailable(source.getId(), "the source returned no verdict")
                     : verdict;
-        } catch (BreachSourceException e) {
-            return BreachVerdict.unavailable(source.getId(), e.getUnavailableCause(), e.getMessage());
         } catch (Throwable t) {
             return contain(source.getId(), t);
         }
@@ -199,8 +190,7 @@ public class BreachEvaluationEngine {
         // Contained to this source: one connector's defect must not take the others down with it.
         LOG.error("Breach source '" + sourceId + "' failed while evaluating a password. The source is treated "
                 + "as unavailable and the remaining sources are unaffected.", t);
-        return BreachVerdict.unavailable(sourceId, UnavailableCause.INTERNAL,
-                "The source raised an unexpected error.");
+        return BreachVerdict.unavailable(sourceId, "the source raised " + t.getClass().getSimpleName());
     }
 
     /**
@@ -220,7 +210,7 @@ public class BreachEvaluationEngine {
                     answered++;
                     break;
                 default:
-                    denied = denied || failureActionOf(plan.get(i), tenantDomain) == FailureAction.DENY;
+                    denied = denied || refuses(plan.get(i), tenantDomain);
             }
         }
 
@@ -237,14 +227,13 @@ public class BreachEvaluationEngine {
         return denied ? Decision.REFUSE_UNVERIFIED : Decision.ACCEPT;
     }
 
-    private FailureAction failureActionOf(BreachSource source, String tenantDomain) {
+    private boolean refuses(BreachSource source, String tenantDomain) {
 
         try {
-            return source.getFailureAction(tenantDomain);
+            return source.refusesWhenUnavailable(tenantDomain);
         } catch (Throwable t) {
-            LOG.error("Breach source '" + source.getId() + "' failed to report its failure action. "
-                    + "Treating it as allow.", t);
-            return FailureAction.ALLOW;
+            LOG.error("Breach source '" + idOf(source) + "' failed to report its failure action. Allowing.", t);
+            return false;
         }
     }
 }

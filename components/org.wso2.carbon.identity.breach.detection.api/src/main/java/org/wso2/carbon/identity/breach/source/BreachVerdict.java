@@ -18,64 +18,51 @@
 
 package org.wso2.carbon.identity.breach.source;
 
-
 /**
- * What one source concluded, and why when it could not conclude anything.
+ * What one source concluded.
  * <p>
- * The engine branches on the outcome. The source id, cause and detail exist for {@link #toString()}, which is
- * what the not-enforcing log prints, so an operator can see why each source failed.
- * <p>
- * Carries no occurrence count. A count is never shown to a user, and nothing else needs one.
+ * The engine branches on the outcome. The source id and reason exist for {@link #toString()}, which is what
+ * the not-enforcing log prints, so an operator can see why each source failed.
  */
 public final class BreachVerdict {
 
     private final Outcome outcome;
     private final String sourceId;
-    private final UnavailableCause cause;
-    private final String detail;
+    private final String reason;
 
-    private BreachVerdict(Outcome outcome, String sourceId, UnavailableCause cause, String detail) {
+    private BreachVerdict(Outcome outcome, String sourceId, String reason) {
 
         this.outcome = outcome;
         this.sourceId = sourceId;
-        this.cause = cause;
-        this.detail = detail;
+        this.reason = reason;
     }
 
     /**
-     * The password is in this source's corpus.
-     *
      * @param sourceId reporting source.
-     * @return the verdict.
+     * @return the password is in this source's corpus.
      */
     public static BreachVerdict found(String sourceId) {
 
-        return new BreachVerdict(Outcome.FOUND, sourceId, null, null);
+        return new BreachVerdict(Outcome.FOUND, sourceId, null);
     }
 
     /**
-     * The source positively determined the password is absent. Never returned for "could not check".
-     *
      * @param sourceId reporting source.
-     * @return the verdict.
+     * @return the source positively determined the password is absent.
      */
     public static BreachVerdict notFound(String sourceId) {
 
-        return new BreachVerdict(Outcome.NOT_FOUND, sourceId, null, null);
+        return new BreachVerdict(Outcome.NOT_FOUND, sourceId, null);
     }
 
     /**
-     * The source could not produce a verdict.
-     *
      * @param sourceId reporting source.
-     * @param cause    why, so telemetry can distinguish a quota from an outage.
-     * @param detail   operator-facing detail. Must never contain the credential or a source credential.
-     * @return the verdict.
+     * @param reason   what went wrong, for the log. Must carry no part of the credential.
+     * @return the source could not produce a verdict.
      */
-    public static BreachVerdict unavailable(String sourceId, UnavailableCause cause, String detail) {
+    public static BreachVerdict unavailable(String sourceId, String reason) {
 
-        return new BreachVerdict(Outcome.UNAVAILABLE, sourceId,
-                cause == null ? UnavailableCause.INTERNAL : cause, detail);
+        return new BreachVerdict(Outcome.UNAVAILABLE, sourceId, reason);
     }
 
     public Outcome getOutcome() {
@@ -83,15 +70,10 @@ public final class BreachVerdict {
         return outcome;
     }
 
-
-
-
-
     @Override
     public String toString() {
 
         return "BreachVerdict{sourceId=" + sourceId + ", outcome=" + outcome
-                + (cause == null ? "" : ", cause=" + cause)
-                + (detail == null ? "" : ", detail=" + detail) + '}';
+                + (reason == null ? "" : ", reason=" + reason) + '}';
     }
 }

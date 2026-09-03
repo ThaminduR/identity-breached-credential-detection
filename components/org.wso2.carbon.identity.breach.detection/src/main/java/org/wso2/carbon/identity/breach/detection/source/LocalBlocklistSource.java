@@ -24,10 +24,8 @@ import org.wso2.carbon.identity.breach.detection.constants.BreachDetectionConsta
 import org.wso2.carbon.identity.breach.source.BreachContext;
 import org.wso2.carbon.identity.breach.source.BreachSource;
 import org.wso2.carbon.identity.breach.source.BreachVerdict;
-import org.wso2.carbon.identity.breach.source.FailureAction;
 import org.wso2.carbon.identity.breach.source.PropertyDescriptor;
 import org.wso2.carbon.identity.breach.source.SourceConfiguration;
-import org.wso2.carbon.identity.breach.source.UnavailableCause;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -76,11 +74,10 @@ public class LocalBlocklistSource implements BreachSource {
     public List<PropertyDescriptor> getProperties() {
 
         return Arrays.asList(
-                PropertyDescriptor.builder(PROPERTY_ENABLE).defaultValue("true").build(),
-                PropertyDescriptor.builder(PROPERTY_PATH).required(true).build(),
-                PropertyDescriptor.builder(PROPERTY_FORMAT).required(true).build(),
-                PropertyDescriptor.builder(PROPERTY_MAX_HEAP_ENTRIES)
-                        .defaultValue(String.valueOf(DEFAULT_MAX_HEAP_ENTRIES)).build());
+                PropertyDescriptor.optional(PROPERTY_ENABLE, "true"),
+                PropertyDescriptor.required(PROPERTY_PATH),
+                PropertyDescriptor.required(PROPERTY_FORMAT),
+                PropertyDescriptor.optional(PROPERTY_MAX_HEAP_ENTRIES, String.valueOf(DEFAULT_MAX_HEAP_ENTRIES)));
     }
 
     @Override
@@ -141,13 +138,13 @@ public class LocalBlocklistSource implements BreachSource {
 
 
     /**
-     * Allow, not deny. A list that failed to load reports itself disabled above, so the engine never consults
-     * it and this value is not reached. See the open question on that behaviour.
+     * A list that failed to load reports itself disabled above, so the engine never consults it and this is
+     * not reached. See the open question on that behaviour.
      */
     @Override
-    public FailureAction getFailureAction(String tenantDomain) {
+    public boolean refusesWhenUnavailable(String tenantDomain) {
 
-        return FailureAction.ALLOW;
+        return false;
     }
 
     @Override
@@ -156,8 +153,7 @@ public class LocalBlocklistSource implements BreachSource {
         BlocklistSnapshot current = snapshot.get();
         if (current == null) {
             // Not being able to check is not the same as finding nothing, and is never reported as if it were.
-            return BreachVerdict.unavailable(getId(), UnavailableCause.MISCONFIGURED,
-                    "No blocklist is loaded.");
+            return BreachVerdict.unavailable(getId(), "no blocklist is loaded");
         }
         String digest = context.getCredential().digestHex(current.getFormat().getDigestAlgorithm());
         return current.contains(digest) ? BreachVerdict.found(getId()) : BreachVerdict.notFound(getId());

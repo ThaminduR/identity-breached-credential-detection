@@ -83,7 +83,7 @@ public class LocalBlocklistSourceTest {
 
         assertFalse(source.isEnabled(TENANT));
         assertEquals(source.evaluate(context("Password@1")).getOutcome(), Outcome.UNAVAILABLE);
-        assertTrue(source.evaluate(context("Password@1")).toString().contains("MISCONFIGURED"));
+        assertTrue(source.evaluate(context("Password@1")).toString().contains("no blocklist is loaded"));
         source.shutdown();
     }
 
@@ -157,10 +157,7 @@ public class LocalBlocklistSourceTest {
 
     private BreachContext context(String password) {
 
-        return BreachContext.builder()
-                .credential(new Credential(password.toCharArray()))
-                .tenantDomain(TENANT)
-                .build();
+        return new BreachContext(new Credential(password.toCharArray()), TENANT);
     }
 
     private static Path write(List<String> lines) throws IOException {

@@ -20,9 +20,7 @@ package org.wso2.carbon.identity.breach.detection.engine;
 
 import org.wso2.carbon.identity.breach.source.BreachContext;
 import org.wso2.carbon.identity.breach.source.BreachSource;
-import org.wso2.carbon.identity.breach.source.BreachSourceException;
 import org.wso2.carbon.identity.breach.source.BreachVerdict;
-import org.wso2.carbon.identity.breach.source.FailureAction;
 import org.wso2.carbon.identity.breach.source.PropertyDescriptor;
 import org.wso2.carbon.identity.breach.source.SourceConfiguration;
 
@@ -42,7 +40,7 @@ class StubBreachSource implements BreachSource {
     private final AtomicInteger calls = new AtomicInteger();
 
     private boolean enabled = true;
-    private FailureAction failureAction = FailureAction.ALLOW;
+    private boolean refuses;
     private RuntimeException enabledFailure;
     private RuntimeException failure;
     private long delayMillis;
@@ -66,9 +64,9 @@ class StubBreachSource implements BreachSource {
         return this;
     }
 
-    StubBreachSource onFailure(FailureAction action) {
+    StubBreachSource refusing() {
 
-        this.failureAction = action;
+        this.refuses = true;
         return this;
     }
 
@@ -130,13 +128,13 @@ class StubBreachSource implements BreachSource {
     }
 
     @Override
-    public FailureAction getFailureAction(String tenantDomain) {
+    public boolean refusesWhenUnavailable(String tenantDomain) {
 
-        return failureAction;
+        return refuses;
     }
 
     @Override
-    public BreachVerdict evaluate(BreachContext context) throws BreachSourceException {
+    public BreachVerdict evaluate(BreachContext context) {
 
         calls.incrementAndGet();
         if (delayMillis > 0) {

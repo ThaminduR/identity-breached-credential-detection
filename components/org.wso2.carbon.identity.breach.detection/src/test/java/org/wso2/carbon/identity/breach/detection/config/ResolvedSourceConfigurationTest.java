@@ -41,12 +41,11 @@ import static org.testng.Assert.assertTrue;
 public class ResolvedSourceConfigurationTest {
 
     private static final List<PropertyDescriptor> DESCRIPTORS = Arrays.asList(
-            PropertyDescriptor.builder("path").required(true).build(),
-            PropertyDescriptor.builder("format").defaultValue("auto").build(),
-            PropertyDescriptor.builder("read_timeout_ms")
-                    .defaultValue("1500").build(),
-            PropertyDescriptor.builder("api_key").secret(true).build(),
-            PropertyDescriptor.builder("verbose").defaultValue("false").build());
+            PropertyDescriptor.required("path"),
+            PropertyDescriptor.optional("format", "auto"),
+            PropertyDescriptor.optional("read_timeout_ms", "1500"),
+            PropertyDescriptor.secret("api_key"),
+            PropertyDescriptor.optional("verbose", "false"));
 
     private Path carbonHome;
 

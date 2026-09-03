@@ -126,10 +126,7 @@ public class BreachDetectionListener extends AbstractIdentityUserOperationEventL
 
         // A copy, so clearing it after evaluation cannot corrupt the write that follows.
         Credential candidate = new Credential(Arrays.copyOf(chars, chars.length));
-        BreachContext context = BreachContext.builder()
-                .credential(candidate)
-                .tenantDomain(resolveTenantDomain(userStoreManager))
-                .build();
+        BreachContext context = new BreachContext(candidate, resolveTenantDomain(userStoreManager));
 
         // The engine owns the copy from here: it clears it before returning, or leaves it to the collector
         // when a source timed out and may still be reading it.

@@ -62,20 +62,19 @@ public interface BreachSource {
 
     /**
      * @param tenantDomain the organization asking.
-     * @return what to do with a password this source could not check.
+     * @return true to refuse a password this source could not check, false to let it through.
      */
-    FailureAction getFailureAction(String tenantDomain);
+    boolean refusesWhenUnavailable(String tenantDomain);
 
     /**
      * Reach a verdict on the candidate password.
      * <p>
-     * Return {@link Outcome#UNAVAILABLE}, or throw, for anything that is not a positive determination. Never
-     * return {@link Outcome#NOT_FOUND} because a call failed. Never log, cache or transmit the credential, and
-     * do not retain it past this call.
+     * Return {@link Outcome#UNAVAILABLE} for anything that is not a positive determination. Never return
+     * {@link Outcome#NOT_FOUND} because a call failed. Never log, cache or transmit the credential, and do
+     * not retain it past this call.
      *
      * @param context the candidate password and the organization it is being set in.
      * @return the verdict.
-     * @throws BreachSourceException if no verdict could be produced.
      */
-    BreachVerdict evaluate(BreachContext context) throws BreachSourceException;
+    BreachVerdict evaluate(BreachContext context);
 }

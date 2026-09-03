@@ -23,8 +23,6 @@ import org.testng.annotations.Test;
 import org.wso2.carbon.identity.breach.source.BreachContext;
 import org.wso2.carbon.identity.breach.source.BreachVerdict;
 import org.wso2.carbon.identity.breach.source.Credential;
-import org.wso2.carbon.identity.breach.source.FailureAction;
-import org.wso2.carbon.identity.breach.source.UnavailableCause;
 
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
@@ -99,8 +97,8 @@ public class BreachEvaluationEngineTest {
 
         registry.bind(StubBreachSource.source("localList", 100, c -> BreachVerdict.notFound("localList")));
         registry.bind(StubBreachSource.source("hibp", 500,
-                c -> BreachVerdict.unavailable("hibp", UnavailableCause.TRANSPORT, "down"))
-                .onFailure(FailureAction.ALLOW));
+                c -> BreachVerdict.unavailable("hibp", "down"))
+                );
 
         Decision result = engine.evaluate(context());
 
@@ -112,8 +110,8 @@ public class BreachEvaluationEngineTest {
 
         registry.bind(StubBreachSource.source("localList", 100, c -> BreachVerdict.notFound("localList")));
         registry.bind(StubBreachSource.source("hibp", 500,
-                c -> BreachVerdict.unavailable("hibp", UnavailableCause.TRANSPORT, "down"))
-                .onFailure(FailureAction.DENY));
+                c -> BreachVerdict.unavailable("hibp", "down"))
+                .refusing());
 
         Decision result = engine.evaluate(context());
 
@@ -124,8 +122,8 @@ public class BreachEvaluationEngineTest {
     public void everySourceUnavailableWithAllowAcceptsButIsNotEnforcing() {
 
         registry.bind(StubBreachSource.source("hibp", 500,
-                c -> BreachVerdict.unavailable("hibp", UnavailableCause.TIMEOUT, "slow"))
-                .onFailure(FailureAction.ALLOW));
+                c -> BreachVerdict.unavailable("hibp", "slow"))
+                );
 
         Decision result = engine.evaluate(context());
 
@@ -181,7 +179,7 @@ public class BreachEvaluationEngineTest {
     public void aRemoteSourceThatOverrunsItsBudgetIsUnavailableNotClean() {
 
         registry.bind(StubBreachSource.source("slow", 500, c -> BreachVerdict.notFound("slow"))
-                .slow(2000).onFailure(FailureAction.DENY));
+                .slow(2000).refusing());
 
         long started = System.currentTimeMillis();
         Decision result = engine.evaluate(context());
@@ -215,9 +213,6 @@ public class BreachEvaluationEngineTest {
 
     private BreachContext context() {
 
-        return BreachContext.builder()
-                .credential(new Credential("Password@1".toCharArray()))
-                .tenantDomain(TENANT)
-                                .build();
+        return new BreachContext(new Credential("Password@1".toCharArray()), TENANT);
     }
 }
