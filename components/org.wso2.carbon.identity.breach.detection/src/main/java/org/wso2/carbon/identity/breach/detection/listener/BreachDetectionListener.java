@@ -111,13 +111,13 @@ public class BreachDetectionListener extends AbstractIdentityUserOperationEventL
         if (!isEnable()) {
             return true;
         }
-        BreachEvaluationEngine engine = BreachDetectionDataHolder.getInstance().getEvaluationEngine();
-        if (engine == null) {
-            LOG.debug("Breach detection is not fully started yet. The credential write proceeds unchanged.");
+        if (isBulkImport()) {
             return true;
         }
 
-        if (isBulkImport()) {
+        BreachEvaluationEngine engine = BreachDetectionDataHolder.getInstance().getEvaluationEngine();
+        if (engine == null) {
+            LOG.debug("Breach detection is not fully started yet. The credential write proceeds unchanged.");
             return true;
         }
 
