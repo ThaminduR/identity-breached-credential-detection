@@ -427,11 +427,18 @@ a message resolved there would use the server's locale for every user. Localizat
 which is how the shipped connectors are written.
 
 > [!WARNING]
-> The codes above do not currently reach a client. The SCIM 2.0 user endpoint returns the English message
-> with no code, and the self-registration and recovery APIs report every password policy failure as
-> `20035 Password Policy Violate` with the message as the description. A breach refusal is therefore
-> indistinguishable by code from a length or history failure, and a client that wants to localize has only
-> the English text to match on.
+> The codes above do not currently reach a client. Each API reports a policy failure with its own generic
+> code and passes the message through as the description, measured on 7.3.0:
+>
+> | Flow | Code returned |
+> |---|---|
+> | `POST /scim2/Users`, `PATCH /scim2/Users/{id}` | `invalidValue`, no code |
+> | `POST /api/identity/user/v1.0/me` (self-registration) | `20035` Password Policy Violate |
+> | `POST /api/identity/recovery/v0.9/set-password` | `20035` Password Policy Violate |
+> | `POST /api/users/v1/me/change-password` | `PWD-10005` Password update failed |
+>
+> A breach refusal is therefore indistinguishable by code from a length or history failure, and a client
+> that wants to localize has only the English text to match on.
 >
 > Fixing this means propagating the original error code from `UserStoreClientException` through
 > `identity-recovery` and `scim2.common`. That benefits every password policy connector, not only this one,
