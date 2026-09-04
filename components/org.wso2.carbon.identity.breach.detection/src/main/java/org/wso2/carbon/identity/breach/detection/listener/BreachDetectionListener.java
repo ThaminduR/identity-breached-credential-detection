@@ -28,6 +28,8 @@ import org.wso2.carbon.identity.breach.detection.internal.BreachDetectionDataHol
 import org.wso2.carbon.identity.breach.detection.util.BreachDetectionUtils;
 import org.wso2.carbon.identity.breach.detection.model.Credential;
 import org.wso2.carbon.identity.core.AbstractIdentityUserOperationEventListener;
+import org.wso2.carbon.identity.core.context.IdentityContext;
+import org.wso2.carbon.identity.core.context.model.Flow;
 import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.mgt.policy.PolicyViolationException;
@@ -115,6 +117,10 @@ public class BreachDetectionListener extends AbstractIdentityUserOperationEventL
             return true;
         }
 
+        if (isBulkImport()) {
+            return true;
+        }
+
         char[] chars = extract(credential);
         if (chars == null || chars.length == 0) {
             // Composition rules handle empty and malformed input.
@@ -145,6 +151,31 @@ public class BreachDetectionListener extends AbstractIdentityUserOperationEventL
                         "This password could not be checked right now. Try again in a moment.");
             default:
                 return true;
+        }
+    }
+
+    /**
+     * A bulk import is not evaluated. The passwords in one are being migrated rather than chosen, so the
+     * user cannot act on a refusal, and a large import would otherwise make one check per row.
+     * <p>
+     * This depends on the server setting {@link Flow.Name#BULK_RESOURCE_UPDATE} on the identity context. As
+     * of 7.3.0 the SCIM 2.0 bulk endpoint does not set a flow at all, so this returns false there and the
+     * import is evaluated. See the open item recorded against it.
+     */
+    private boolean isBulkImport() {
+
+        Flow flow = currentFlow();
+        return flow != null && flow.getName() == Flow.Name.BULK_RESOURCE_UPDATE;
+    }
+
+    private Flow currentFlow() {
+
+        try {
+            IdentityContext context = IdentityContext.getThreadLocalIdentityContext();
+            return context == null ? null : context.getFlow();
+        } catch (Throwable t) {
+            LOG.debug("No identity context is available, so the write is not treated as a bulk import.");
+            return null;
         }
     }
 

@@ -335,19 +335,17 @@ which is consistent with other file-backed configuration in the product. Plan up
 Connector bundles are the exception: adding one to `dropins` binds it without a restart, because that is a
 service event rather than a file change.
 
-### Switch the feature off for a migration window
+### Bulk imports
 
-There is no per-operation exemption. A migration that must not evaluate passwords uses the deployment switch,
-which requires a restart at each end of the window.
+A write the server marks as a bulk import is not evaluated. The passwords in an import are being migrated
+rather than chosen, so the user cannot act on a refusal, and a large import would otherwise perform one check
+per row. There is no setting for this.
 
-```toml
-[event.default_listener.breach_detection]
-enable = false
-```
-
-Before using it, consider whether the migrated passwords are the ones you most want checked. The local
-blocklist answers from memory, and a remote connector caches each digest prefix, so a bulk import is usually
-cheaper to evaluate than it appears.
+> [!WARNING]
+> This depends on the server setting the `BULK_RESOURCE_UPDATE` flow on the identity context. In 7.3.0 the
+> SCIM 2.0 bulk endpoint does not set a flow, so an import through `/scim2/Bulk` **is** evaluated and a
+> breached password in it is refused. Plan an import accordingly, or switch the feature off for the import
+> window with `enable = false` under `[event.default_listener.breach_detection]`.
 
 ### Configure a remote source's API key with care
 
