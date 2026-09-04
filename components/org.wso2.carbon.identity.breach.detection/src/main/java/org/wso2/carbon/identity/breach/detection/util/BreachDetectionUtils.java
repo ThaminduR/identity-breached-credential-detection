@@ -24,39 +24,14 @@ import java.util.Locale;
 import java.util.MissingResourceException;
 import java.util.ResourceBundle;
 
-/**
- * Helpers shared across the bundle. No method here accepts a candidate password.
- */
+/** Helpers shared across the bundle. No method here accepts a candidate password. */
 public class BreachDetectionUtils {
 
     private BreachDetectionUtils() {
 
     }
 
-    /**
-     * Source ids are compared leniently, so that a deployment.toml namespace written as {@code local_list}
-     * and a policy entry written as {@code localList} name the same source. The canonical form is the value
-     * the source returns from {@code getId()}.
-     *
-     * @param sourceId an id as written in configuration or policy.
-     * @return a comparison key.
-     */
-    public static String normalizeSourceId(String sourceId) {
-
-        if (sourceId == null) {
-            return null;
-        }
-        return sourceId.replace("_", "").replace("-", "").toLowerCase(Locale.ROOT).trim();
-    }
-
-    /**
-     * Resolves a user-facing message. Falls back to the supplied default, so that a missing translation
-     * does not show the message key to a user.
-     *
-     * @param key            message key.
-     * @param defaultMessage message to use when the bundle has no entry.
-     * @return the message.
-     */
+    /** Falls back to the supplied default, so a missing translation never shows the key to a user. */
     public static String getMessage(String key, String defaultMessage) {
 
         try {
@@ -71,11 +46,7 @@ public class BreachDetectionUtils {
         return defaultMessage;
     }
 
-    /**
-     * @param value a configured value.
-     * @param fallback value to use when unset or unparseable.
-     * @return the parsed integer.
-     */
+    /** @param fallback used when unset or unparseable. */
     public static int parseInt(String value, int fallback) {
 
         if (value == null || value.trim().isEmpty()) {
@@ -88,11 +59,7 @@ public class BreachDetectionUtils {
         }
     }
 
-    /**
-     * @param value a configured value.
-     * @param fallback value to use when unset.
-     * @return the parsed flag.
-     */
+    /** @param fallback used when unset. */
     public static boolean parseBoolean(String value, boolean fallback) {
 
         if (value == null || value.trim().isEmpty()) {

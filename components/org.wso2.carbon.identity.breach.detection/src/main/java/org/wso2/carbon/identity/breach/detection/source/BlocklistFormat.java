@@ -22,10 +22,7 @@ import java.util.Locale;
 
 /**
  * How the operator's file is written. Plaintext is hashed at load, so the in-memory form is always digests.
- * <p>
- * There is no {@code auto} member and no fallback value. The file determines the algorithm, and guessing
- * wrong does not raise an error, it silently stops matching. An absent or unrecognised value leaves the
- * source unconfigured.
+ * There is no auto-detection: guessing the algorithm wrong raises no error, it silently stops matching.
  */
 public enum BlocklistFormat {
 
@@ -45,17 +42,13 @@ public enum BlocklistFormat {
         this.hexLength = hexLength;
     }
 
-    /**
-     * @return the algorithm a candidate password is hashed with to look it up.
-     */
+    /** @return the algorithm a candidate password is hashed with to look it up. */
     public String getDigestAlgorithm() {
 
         return digestAlgorithm;
     }
 
-    /**
-     * @return the expected hex digest length, or -1 when entries are not hashed in the file.
-     */
+    /** @return the expected hex digest length, or -1 when the file holds plaintext. */
     public int getHexLength() {
 
         return hexLength;
@@ -67,11 +60,8 @@ public enum BlocklistFormat {
     }
 
     /**
-     * The accepted values are exactly the ones the documentation lists. There are no aliases, so a value
-     * that is not one of them leaves the source unconfigured rather than resolving to a near match.
-     *
-     * @param value the configured value.
-     * @return the format, or {@code null} when the value is not one of the accepted ones.
+     * Accepts exactly the documented values. There are no aliases, so anything else returns null and leaves
+     * the source unconfigured rather than resolving to a near match.
      */
     public static BlocklistFormat from(String value) {
 
@@ -87,9 +77,7 @@ public enum BlocklistFormat {
         return null;
     }
 
-    /**
-     * @return the value as it appears in configuration.
-     */
+    /** @return the value as it appears in configuration. */
     public String toConfigValue() {
 
         return configValue;

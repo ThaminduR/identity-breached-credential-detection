@@ -19,11 +19,9 @@
 package org.wso2.carbon.identity.breach.detection.model;
 
 /**
- * What the server should do with a candidate password. A source returns this, and the engine returns the
- * first value that is not {@link #ACCEPT}.
- * <p>
- * A refusal because the password is breached and a refusal because it could not be checked are kept
- * separate, because the message shown to the user and the action an operator takes are different.
+ * What the server should do with a candidate password. A source returns this and the engine returns the
+ * first value that is not {@link #ACCEPT}. The two refusals stay separate because the user message and the
+ * operator response differ.
  */
 public enum Decision {
 

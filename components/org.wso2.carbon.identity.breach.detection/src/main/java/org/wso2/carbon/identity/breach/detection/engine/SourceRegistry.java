@@ -20,7 +20,6 @@ package org.wso2.carbon.identity.breach.detection.engine;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.wso2.carbon.identity.breach.detection.util.BreachDetectionUtils;
 import org.wso2.carbon.identity.breach.detection.spi.BreachSource;
 
 import java.util.ArrayList;
@@ -30,11 +29,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
- * The set of sources bound right now.
- * <p>
- * The engine reaches sources through this registry and holds no reference to any concrete source. The bound
- * set is logged on every bind and unbind, so an operator can confirm that a connector loaded without
- * inspecting the dropins directory.
+ * The set of sources bound right now. It is logged on every bind and unbind, so an operator can confirm a
+ * connector loaded without inspecting the dropins directory.
  */
 public class SourceRegistry {
 
@@ -48,8 +44,7 @@ public class SourceRegistry {
             LOG.warn("Ignoring a breach source that did not declare an id.");
             return;
         }
-        String key = BreachDetectionUtils.normalizeSourceId(source.getId());
-        BreachSource previous = sources.put(key, source);
+        BreachSource previous = sources.put(source.getId(), source);
         if (previous != null) {
             LOG.warn("Breach source id '" + source.getId() + "' was already registered. The newly bound "
                     + "service replaces it.");
@@ -63,14 +58,11 @@ public class SourceRegistry {
         if (source == null || source.getId() == null) {
             return;
         }
-        sources.remove(BreachDetectionUtils.normalizeSourceId(source.getId()), source);
+        sources.remove(source.getId(), source);
         LOG.info("Breach source unbound: id=" + source.getId() + ". Bound sources are now " + describe() + ".");
     }
 
-    /**
-     * @return every bound source, ordered by ascending priority. A source declares its own priority, so an
-     * in-process source can be called first without the engine knowing which source it is.
-     */
+    /** @return every bound source, ordered by ascending priority. */
     public List<BreachSource> installed() {
 
         List<BreachSource> ordered = new ArrayList<>(sources.values());
@@ -79,9 +71,7 @@ public class SourceRegistry {
         return ordered;
     }
 
-    /**
-     * @return a compact operator-facing description of the bound set.
-     */
+    /** @return a compact description of the bound set, for the log. */
     private String describe() {
 
         return installed().stream()

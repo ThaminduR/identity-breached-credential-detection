@@ -29,11 +29,8 @@ import java.util.List;
 
 /**
  * Calls the sources an organization enabled and returns the first decision that is not
- * {@link Decision#ACCEPT}.
- * <p>
- * The engine holds no reference to any concrete source. Call order comes from the priority each source
- * declares, so an in-process source is called before one that makes a network request. Each source decides
- * what happens when it cannot reach its data, so the engine does not interpret failures.
+ * {@link Decision#ACCEPT}. Call order comes from the priority each source declares, and each source resolves
+ * its own failure policy, so the engine never interprets a failure.
  */
 public class BreachEvaluationEngine {
 
@@ -46,14 +43,7 @@ public class BreachEvaluationEngine {
         this.registry = registry;
     }
 
-    /**
-     * Checks a candidate against every source this organization enabled, stopping at the first refusal.
-     * Clears the credential before returning.
-     *
-     * @param credential   the candidate password.
-     * @param tenantDomain the organization the password is being set in.
-     * @return what the caller should do.
-     */
+    /** Stops at the first refusal, and clears the credential before returning. */
     public Decision evaluate(Credential credential, String tenantDomain) {
 
         try {

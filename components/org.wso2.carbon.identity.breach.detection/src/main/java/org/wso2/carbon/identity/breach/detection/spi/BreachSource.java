@@ -24,51 +24,32 @@ import org.wso2.carbon.identity.breach.detection.model.Decision;
 /**
  * A breach intelligence source, published as an OSGi service.
  * <p>
- * A source owns everything about how it reaches its data. It sets its own timeouts, retries and failure
- * handling, and it decides what happens to a password it could not check. The engine calls
- * {@link #check} on the calling thread and does not bound it, so a source that makes a network request must
- * apply its own timeout.
+ * A source owns its own timeouts, retries and failure policy. {@link #check} runs on the calling thread and
+ * is not bounded, so a source that makes a network request must apply its own timeout.
  */
 public interface BreachSource {
 
-    /**
-     * @return a stable id, lowercase and without spaces. Deployment configuration is namespaced on it.
-     */
+    /** @return a stable id. Configuration is namespaced on it and matched exactly. */
     String getId();
 
-    /**
-     * @return the call order hint. The engine calls sources in ascending order of this value.
-     */
+    /** @return the call order hint. Sources are called in ascending order. */
     int getPriority();
 
-    /**
-     * Receive the resolved deployment settings. Called on bind, and again on reconfiguration.
-     *
-     * @param configuration resolved settings for this source.
-     */
+    /** Receives the resolved settings. Called on bind and on reconfiguration. */
     void configure(SourceConfiguration configuration);
 
     /**
-     * Whether this organization wants the source consulted, and whether the source has enough configuration
-     * to answer. A source that cannot answer returns false.
-     *
-     * @param tenantDomain the organization asking.
-     * @return true if the source should be consulted.
+     * Whether this organization wants the source consulted and it has enough configuration to answer. A
+     * source that cannot answer returns false.
      */
     boolean isEnabled(String tenantDomain);
 
     /**
-     * Check the candidate password and decide the result.
+     * Returns {@link Decision#REFUSE_BREACHED} when the password is in this source's data and
+     * {@link Decision#ACCEPT} when it is not. When the data cannot be reached, log the reason and apply the
+     * configured failure policy.
      * <p>
-     * Return {@link Decision#REFUSE_BREACHED} when the password is in this source's data. Return
-     * {@link Decision#ACCEPT} when it is not. When the source cannot reach its data, log the reason and
-     * return either {@link Decision#REFUSE_UNVERIFIED} or {@link Decision#ACCEPT} according to the failure
-     * policy configured for the source. Do not log, cache or transmit the credential, and do not retain it
-     * after this method returns.
-     *
-     * @param credential   the candidate password.
-     * @param tenantDomain the organization the password is being set in.
-     * @return what the server should do with this password.
+     * Never log, cache or transmit the credential, and do not retain it after this returns.
      */
     Decision check(Credential credential, String tenantDomain);
 }

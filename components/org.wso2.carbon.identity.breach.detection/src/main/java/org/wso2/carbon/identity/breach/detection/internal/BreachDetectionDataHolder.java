@@ -21,9 +21,7 @@ package org.wso2.carbon.identity.breach.detection.internal;
 import org.wso2.carbon.identity.breach.detection.engine.BreachEvaluationEngine;
 import org.wso2.carbon.identity.breach.detection.engine.SourceRegistry;
 
-/**
- * Holds the shared instances so that the listener and the component use the same engine and registry.
- */
+/** Holds the shared instances so the listener and the component use the same engine and registry. */
 public class BreachDetectionDataHolder {
 
     private static final BreachDetectionDataHolder INSTANCE = new BreachDetectionDataHolder();

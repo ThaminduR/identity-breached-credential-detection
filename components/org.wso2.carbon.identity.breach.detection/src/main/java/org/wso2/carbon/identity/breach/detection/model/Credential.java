@@ -27,11 +27,8 @@ import java.text.Normalizer;
 import java.util.Arrays;
 
 /**
- * The candidate password, held as a {@code char[]} so that it can be cleared and does not enter the string
- * pool.
- * <p>
- * Do not pass this value to a log statement, an exception message or a cache key. The engine clears it after
- * the last source returns. A source must not retain it.
+ * The candidate password, held as a {@code char[]} so that it can be cleared. Never pass it to a log
+ * statement, an exception message or a cache key, and never retain it past a call.
  */
 public final class Credential {
 
@@ -40,9 +37,7 @@ public final class Credential {
     private final char[] chars;
     private volatile boolean cleared;
 
-    /**
-     * @param chars the candidate password. Taken by reference: the caller must not mutate or reuse it.
-     */
+    /** @param chars taken by reference. The caller must not mutate or reuse it. */
     public Credential(char[] chars) {
 
         if (chars == null) {
@@ -51,11 +46,7 @@ public final class Credential {
         this.chars = chars;
     }
 
-    /**
-     * Returns the canonical bytes of the password: Unicode NFC, UTF-8, with no case folding and no
-     * trimming, because a password is case- and whitespace-significant. Private, because
-     * {@link #digestHex(String)} is the only caller.
-     */
+    /** Unicode NFC and UTF-8, with no case folding or trimming: a password is significant in both. */
     private byte[] canonicalBytes() {
 
         assertUsable();
@@ -75,9 +66,7 @@ public final class Credential {
     /**
      * Returns the digest of the canonical bytes as uppercase hex. A source matches on this value.
      *
-     * @param algorithm a {@link MessageDigest} algorithm name, for example {@code SHA-1}.
-     * @return uppercase hex digest.
-     * @throws IllegalArgumentException if the algorithm is not available.
+     * @param algorithm a {@link MessageDigest} name, for example {@code SHA-1}.
      */
     public String digestHex(String algorithm) {
 
@@ -99,18 +88,14 @@ public final class Credential {
         }
     }
 
-    /**
-     * Zeroes the backing array. The engine calls this after every source has returned.
-     */
+    /** Zeroes the backing array. The engine calls this after every source has returned. */
     public void clear() {
 
         Arrays.fill(chars, '\0');
         cleared = true;
     }
 
-    /**
-     * @return {@code true} once {@link #clear()} has run.
-     */
+    /** @return true once {@link #clear()} has run. */
     public boolean isCleared() {
 
         return cleared;

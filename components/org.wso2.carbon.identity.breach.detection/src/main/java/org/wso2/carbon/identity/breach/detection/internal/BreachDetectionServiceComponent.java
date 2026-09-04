@@ -36,7 +36,6 @@ import org.wso2.carbon.identity.breach.detection.engine.SourceRegistry;
 import org.wso2.carbon.identity.breach.detection.listener.BreachDetectionListener;
 import org.wso2.carbon.identity.breach.detection.source.LocalBlocklistSource;
 import org.wso2.carbon.identity.breach.detection.spi.BreachSource;
-import org.wso2.carbon.identity.breach.detection.util.BreachDetectionUtils;
 import org.wso2.carbon.identity.core.util.IdentityCoreInitializedEvent;
 import org.wso2.carbon.user.core.listener.UserOperationEventListener;
 
@@ -45,10 +44,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Starts the capability and publishes its services.
- * <p>
- * The {@link BreachSource} reference is dynamic and has multiple cardinality, so a connector added to
- * {@code dropins} binds without a restart, and removing it unbinds that one service.
+ * Starts the capability and publishes its services. The {@link BreachSource} reference is dynamic and has
+ * multiple cardinality, so a connector binds and unbinds on its own.
  */
 @Component(
         name = "identity.breach.detection.component",
@@ -61,10 +58,8 @@ public class BreachDetectionServiceComponent {
     private final List<ServiceRegistration<?>> registrations = new ArrayList<>();
 
     /**
-     * SCR binds every published source before this component activates, but the configuration is only read
-     * during activation. A source bound before that point is configured by the loop in
-     * {@link #activate(ComponentContext)}; one bound after it is configured by its own bind callback. This
-     * field keeps a source from being configured twice, and is null until activation.
+     * Null until activation. SCR binds sources before the configuration is read, so a source bound early is
+     * configured by the activation loop and one bound later by its own callback, never both.
      */
     private volatile BreachDetectionConfig config;
 
@@ -98,15 +93,11 @@ public class BreachDetectionServiceComponent {
                 + ", listener order: " + config.getListenerOrder() + ".");
     }
 
-    /**
-     * Hands a source the settings configured for it. This is the only place a source's configuration is
-     * assembled. Failures are contained so that one connector cannot stop the others from starting.
-     */
+    /** Contained, so one connector's failure cannot stop the others from starting. */
     private void configure(BreachSource source) {
 
         try {
-            Map<String, String> configured =
-                    config.getSourceProperties(BreachDetectionUtils.normalizeSourceId(source.getId()));
+            Map<String, String> configured = config.getSourceProperties(source.getId());
             source.configure(new ResolvedSourceConfiguration(source.getId(), configured));
         } catch (Throwable t) {
             LOG.error("Failed to configure breach source '" + source.getId()
@@ -153,9 +144,7 @@ public class BreachDetectionServiceComponent {
         BreachDetectionDataHolder.getInstance().getSourceRegistry().unbind(source);
     }
 
-    /**
-     * Referenced so that identity.xml is parsed before this component reads it.
-     */
+    /** Referenced so that identity.xml is parsed before this component reads it. */
     @Reference(
             name = "identity.core.init.event.service",
             service = IdentityCoreInitializedEvent.class,

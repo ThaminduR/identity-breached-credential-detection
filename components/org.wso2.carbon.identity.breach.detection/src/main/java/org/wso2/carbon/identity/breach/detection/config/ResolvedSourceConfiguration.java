@@ -34,11 +34,8 @@ import java.util.Optional;
 import java.util.Set;
 
 /**
- * The deployment settings for one source.
- * <p>
- * The core reads the configuration and passes the values to the source. A source does not open a
- * configuration file and does not access the secure vault. Secret aliases are resolved before this object is
- * constructed, so every value it returns is plain text.
+ * The deployment settings for one source. Secret aliases are resolved before this is constructed, so every
+ * value it returns is plain text.
  */
 public class ResolvedSourceConfiguration implements SourceConfiguration {
 

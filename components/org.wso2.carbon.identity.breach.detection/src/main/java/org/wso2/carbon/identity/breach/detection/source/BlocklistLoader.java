@@ -33,11 +33,8 @@ import java.util.Locale;
 import java.util.Set;
 
 /**
- * Builds a {@link BlocklistSnapshot} from the operator's file.
- * <p>
- * Hashed entries are read as digests and plaintext entries are hashed on the way in, so both produce one set
- * of digests. Every line is treated as data. A line is a password or a digest, and is never interpreted as a
- * directive or a path.
+ * Builds a {@link BlocklistSnapshot} from the operator's file. Plaintext entries are hashed on the way in,
+ * so the result is always a set of digests. Every line is data, never a directive or a path.
  */
 class BlocklistLoader {
 
@@ -48,13 +45,8 @@ class BlocklistLoader {
     }
 
     /**
-     * Read the file and index it.
-     *
-     * @param path       the file, already confined to a permitted location by the configuration layer.
-     * @param format     how the file is written, as the operator configured it.
-     * @param maxEntries the ceiling, beyond which loading stops and reports truncation.
-     * @return the snapshot.
-     * @throws IOException if the file cannot be read.
+     * @param path       already confined to a permitted location by the configuration layer.
+     * @param maxEntries loading stops at this count and reports truncation.
      */
     static BlocklistSnapshot load(Path path, BlocklistFormat format, int maxEntries) throws IOException {
 
@@ -96,19 +88,13 @@ class BlocklistLoader {
         return new BlocklistSnapshot(digests, format);
     }
 
-    /**
-     * Blank lines and comments are not entries and are not counted as skipped. Nothing is trimmed, because a
-     * password is whitespace-significant, and {@code readLine} has already removed the line ending.
-     */
+    /** Blank lines and comments are not entries. Nothing is trimmed: a password is whitespace-significant. */
     private static String strip(String line) {
 
         return line.isEmpty() || line.startsWith("#") ? null : line;
     }
 
-    /**
-     * A hashed entry is read as it stands, because its algorithm was fixed when the list was produced. A
-     * plaintext entry is hashed here, so that only the digest is held for the life of the list.
-     */
+    /** A hashed entry stands as written; its algorithm was fixed when the list was produced. */
     private static String toDigest(String content, BlocklistFormat format) {
 
         if (format.isHashed()) {
@@ -135,10 +121,7 @@ class BlocklistLoader {
         return true;
     }
 
-    /**
-     * Hashes a file entry with the same code that hashes a candidate password, so that loading and lookup
-     * cannot normalize differently.
-     */
+    /** Uses the same code as a candidate password, so load and lookup cannot normalize differently. */
     static String digestOf(String value, String algorithm) {
 
         return new Credential(value.toCharArray()).digestHex(algorithm);

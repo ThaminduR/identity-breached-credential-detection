@@ -32,11 +32,8 @@ import java.nio.file.Paths;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * The operator's own list of forbidden passwords, answered without a network call.
- * <p>
- * This is the only source that ships in the bundle. It makes no outbound call, so it works in a
- * network-isolated deployment. It registers through the same registry as a connector and has no privileged
- * path through the engine.
+ * The operator's own list of forbidden passwords, answered from memory. The only source that ships in the
+ * bundle, and it registers through the same registry as a connector with no privileged path.
  */
 public class LocalBlocklistSource implements BreachSource {
 
@@ -48,10 +45,8 @@ public class LocalBlocklistSource implements BreachSource {
     public static final String PROPERTY_MAX_HEAP_ENTRIES = "max_heap_entries";
 
     /**
-     * Caps the number of digests held in memory, not the bytes they occupy. An entry was measured at 122.5
-     * bytes for a 40-character digest and 146.5 bytes for a 64-character one, so this ceiling costs 123 MB
-     * or 147 MB depending on the format. The pack ships with a 1 GB maximum heap, so a higher default would
-     * let a blocklist exhaust it before the cap was ever reached.
+     * Caps the entry count, not the bytes. At a measured 122.5 bytes per 40-character digest this costs
+     * about 123 MB, against the 1 GB heap the pack ships with.
      */
     private static final int DEFAULT_MAX_HEAP_ENTRIES = 1_000_000;
 
@@ -112,10 +107,8 @@ public class LocalBlocklistSource implements BreachSource {
     }
 
     /**
-     * Supplying a readable file is what switches the list on. {@link #PROPERTY_ENABLE} exists so that a
-     * configured list can be switched off without removing its settings. It is a deployment property rather
-     * than a per-tenant one because the file is deployment-wide, and a per-tenant switch over one shared file
-     * would let two organizations disagree about a file neither of them owns.
+     * A readable file is what switches the list on. {@link #PROPERTY_ENABLE} parks a configured list without
+     * removing its settings, and is deployment-wide because the file is.
      */
     @Override
     public boolean isEnabled(String tenantDomain) {
@@ -123,11 +116,7 @@ public class LocalBlocklistSource implements BreachSource {
         return enabled && path != null && snapshot.get() != null;
     }
 
-    /**
-     * A list that is not loaded accepts rather than refuses. {@link #isEnabled} already reports false in
-     * that case, so the engine does not reach this method. See the open question recorded against that
-     * behaviour.
-     */
+    /** A list that failed to load accepts. {@link #isEnabled} is false then, so the engine skips it. */
     @Override
     public Decision check(Credential credential, String tenantDomain) {
 
@@ -139,10 +128,7 @@ public class LocalBlocklistSource implements BreachSource {
         return current.contains(digest) ? Decision.REFUSE_BREACHED : Decision.ACCEPT;
     }
 
-    /**
-     * Rebuilds the list. The new list is built in full before the reference is replaced. A file that cannot
-     * be read leaves the previous list in effect instead of emptying it.
-     */
+    /** Built in full before the reference is replaced. An unreadable file leaves the previous list. */
     private void reload() {
 
         Path current = path;
@@ -158,9 +144,7 @@ public class LocalBlocklistSource implements BreachSource {
         }
     }
 
-    /**
-     * Release the list.
-     */
+    /** Releases the list. */
     public void shutdown() {
 
         snapshot.set(null);

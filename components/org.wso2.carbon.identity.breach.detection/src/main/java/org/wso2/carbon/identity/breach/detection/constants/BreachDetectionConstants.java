@@ -19,8 +19,8 @@
 package org.wso2.carbon.identity.breach.detection.constants;
 
 /**
- * Names shared across the capability: configuration keys, governance property names, and the error codes a
- * caller sees. Exported so an administrator API can name the same things without duplicating literals.
+ * Names shared across the capability. Exported so a caller can name the same error codes without
+ * duplicating literals.
  */
 public class BreachDetectionConstants {
 
@@ -28,11 +28,7 @@ public class BreachDetectionConstants {
 
     }
 
-    /**
-     * Placed after input validation at 3, so a password that fails composition rules never reaches a breach
-     * source, and before the service extension at 10000, so in-product policy resolves before a customer
-     * extension runs.
-     */
+    /** After input validation at 3 and before the service extension at 10000. */
     public static final int DEFAULT_LISTENER_ORDER = 420;
 
     /** The identity.xml element carrying operator configuration, rendered from [breach_detection]. */
@@ -48,11 +44,7 @@ public class BreachDetectionConstants {
     public static final String LOCAL_LIST_SOURCE_ID = "localList";
 
 
-    /**
-     * Error codes. A policy rejection is reported as a client error carrying the reason. It is not reported
-     * as a server fault, because a server fault cannot be distinguished from an outage and leaves a portal
-     * with nothing to display.
-     */
+    /** Client errors carrying the reason. A server fault would be indistinguishable from an outage. */
     public static final String ERROR_CODE_BREACHED_PASSWORD = "BRD-60001";
     public static final String ERROR_CODE_CANNOT_VERIFY = "BRD-60002";
 

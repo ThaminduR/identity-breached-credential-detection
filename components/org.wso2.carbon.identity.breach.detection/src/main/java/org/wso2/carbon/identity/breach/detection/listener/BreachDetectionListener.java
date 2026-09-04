@@ -43,11 +43,9 @@ import java.util.Arrays;
 import java.util.Map;
 
 /**
- * Intercepts every password write.
- * <p>
- * Every password-setting path calls {@code AbstractUserStoreManager}, which runs an ordered listener chain
- * before the write. Intercepting there covers paths added later, and writes to a secondary user store.
- * Order 420 places this listener after input validation at 3 and before the service extension at 10000.
+ * Intercepts every password write. Every password-setting path calls {@code AbstractUserStoreManager},
+ * which runs an ordered listener chain first, so intercepting there also covers paths added later and
+ * writes to a secondary user store.
  */
 public class BreachDetectionListener extends AbstractIdentityUserOperationEventListener {
 
@@ -155,12 +153,11 @@ public class BreachDetectionListener extends AbstractIdentityUserOperationEventL
     }
 
     /**
-     * A bulk import is not evaluated. The passwords in one are being migrated rather than chosen, so the
-     * user cannot act on a refusal, and a large import would otherwise make one check per row.
+     * A bulk import is not evaluated: its passwords are migrated rather than chosen, so the user cannot act
+     * on a refusal.
      * <p>
-     * This depends on the server setting {@link Flow.Name#BULK_RESOURCE_UPDATE} on the identity context. As
-     * of 7.3.0 the SCIM 2.0 bulk endpoint does not set a flow at all, so this returns false there and the
-     * import is evaluated. See the open item recorded against it.
+     * This needs the server to set {@link Flow.Name#BULK_RESOURCE_UPDATE}. As of 7.3.0 the SCIM 2.0 bulk
+     * endpoint sets no flow, so this returns false there and the import is evaluated.
      */
     private boolean isBulkImport() {
 
@@ -179,10 +176,7 @@ public class BreachDetectionListener extends AbstractIdentityUserOperationEventL
         }
     }
 
-    /**
-     * A client error carrying its reason, not a server fault. The wrapped {@code PolicyViolationException} is
-     * what the recovery and self-registration paths recognise.
-     */
+    /** The wrapped {@code PolicyViolationException} is what recovery and self-registration recognise. */
     private UserStoreClientException policyRejection(String errorCode, String messageKey, String fallback) {
 
         String message = BreachDetectionUtils.getMessage(messageKey, fallback);
@@ -203,10 +197,7 @@ public class BreachDetectionListener extends AbstractIdentityUserOperationEventL
         return MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
     }
 
-    /**
-     * The credential arrives as a {@link Secret} for listeners that handle secrets and as a character sequence
-     * otherwise. Neither is turned into a {@code String} here.
-     */
+    /** Arrives as a {@link Secret} or a character sequence. Neither becomes a {@code String} here. */
     private char[] extract(Object credential) {
 
         if (credential == null) {

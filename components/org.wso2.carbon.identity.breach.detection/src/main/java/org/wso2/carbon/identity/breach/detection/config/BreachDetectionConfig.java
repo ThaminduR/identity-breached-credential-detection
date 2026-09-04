@@ -24,7 +24,6 @@ import org.apache.axiom.om.OMElement;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.breach.detection.constants.BreachDetectionConstants;
-import org.wso2.carbon.identity.breach.detection.util.BreachDetectionUtils;
 import org.wso2.carbon.identity.core.model.IdentityEventListenerConfig;
 import org.wso2.carbon.identity.core.util.IdentityConfigParser;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
@@ -40,15 +39,9 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * The per-source deployment settings, read from the {@code <BreachDetection>} element.
- * <p>
- * Constructed once, when the component activates, so that identity.xml has already been parsed. Changing the
- * file requires a server restart, so the values never change after construction.
- * <p>
- * Read from identity.xml, which the config parser renders from {@code [breach_detection]} in deployment.toml.
- * This configuration is kept separate from tenant policy for two reasons. Switching the feature off must work
- * when the tenant configuration store is unreachable, and a filesystem path or a memory limit is a property
- * of the deployment rather than of a tenant.
+ * The per-source deployment settings, read from the {@code <BreachDetection>} element of identity.xml, which
+ * the config parser renders from {@code [breach_detection]} in deployment.toml. Constructed once at
+ * activation; changing the file needs a server restart. Per-tenant policy lives in the governance store.
  */
 public class BreachDetectionConfig {
 
@@ -78,12 +71,7 @@ public class BreachDetectionConfig {
         this.sourceProperties = Collections.unmodifiableMap(sources);
     }
 
-    /**
-     * Reports the value of the listener's {@code enable} attribute. Enforcement of that attribute belongs to
-     * Carbon, which skips a disabled listener before it is called, so this value is read only for logging.
-     *
-     * @return whether the listener is declared enabled.
-     */
+    /** Read only for logging. Carbon itself skips a disabled listener before it is called. */
     public boolean isEnabledAtDeployment() {
 
         return enabledAtDeployment;
@@ -95,12 +83,13 @@ public class BreachDetectionConfig {
     }
 
     /**
-     * @param normalizedSourceId key from {@link BreachDetectionUtils#normalizeSourceId(String)}.
-     * @return the settings written under that namespace, or {@code null} if the operator configured none.
+     * The namespace is matched exactly against the source id, so
+     * {@code [breach_detection.sources.localList]} configures the source whose id is {@code localList} and
+     * nothing else.
      */
-    public Map<String, String> getSourceProperties(String normalizedSourceId) {
+    public Map<String, String> getSourceProperties(String sourceId) {
 
-        return sourceProperties.get(normalizedSourceId);
+        return sourceProperties.get(sourceId);
     }
 
     private void parse(Map<String, Map<String, String>> sources) {
@@ -158,12 +147,10 @@ public class BreachDetectionConfig {
             // An alias that cannot be resolved leaves the property absent. The alias text is not stored.
             properties.put(name, alias == null ? value : resolveSecret(resolver, alias));
         }
-        sources.put(BreachDetectionUtils.normalizeSourceId(id), properties);
+        sources.put(id, properties);
     }
 
-    /**
-     * The element children of a configuration element, skipping comments and text nodes.
-     */
+    /** Element children only, skipping comments and text nodes. */
     private static List<OMElement> children(OMElement element) {
 
         List<OMElement> elements = new ArrayList<>();
@@ -176,11 +163,7 @@ public class BreachDetectionConfig {
         return elements;
     }
 
-    /**
-     * Returns a resolver over the document root, or null when the secure vault is unavailable. Without a
-     * resolver a secret value is read literally, so one unavailable vault does not fail the whole
-     * configuration layer.
-     */
+    /** Null when the vault is unavailable, in which case a secret value is read literally. */
     private static SecretResolver secretResolver(OMElement element) {
 
         try {
@@ -197,9 +180,7 @@ public class BreachDetectionConfig {
         }
     }
 
-    /**
-     * @return the resolved value, or null. A vault failure is logged without the alias or the value.
-     */
+    /** @return the resolved value, or null. A vault failure is logged without the alias or the value. */
     private static String resolveSecret(SecretResolver resolver, String alias) {
 
         if (resolver == null || !resolver.isInitialized()) {
