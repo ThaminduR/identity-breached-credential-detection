@@ -43,16 +43,17 @@ public class BreachDetectionConstants {
     /** The source that ships in this bundle. */
     public static final String LOCAL_LIST_SOURCE_ID = "localList";
 
+    private static final String ERROR_PREFIX = "BRD-";
 
     /**
-     * The refusals a user can see. Each pairs a code with English text, the same shape the password policy
-     * connector uses. A client localizes on the code; the text is the fallback when it does not.
+     * The refusals a user can see. Each pairs a code with English text. A client localizes on the code; the
+     * text is the fallback when it does not.
      */
     public enum ErrorMessages {
 
-        ERROR_CODE_BREACHED_PASSWORD("BRD-60001",
+        ERROR_CODE_BREACHED_PASSWORD("60001",
                 "This password has appeared in a known data breach. Choose a longer, unique password."),
-        ERROR_CODE_CANNOT_VERIFY("BRD-60002",
+        ERROR_CODE_CANNOT_VERIFY("60002",
                 "This password could not be checked right now. Try again in a moment.");
 
         private final String code;
@@ -66,7 +67,7 @@ public class BreachDetectionConstants {
 
         public String getCode() {
 
-            return code;
+            return ERROR_PREFIX + code;
         }
 
         public String getMessage() {
@@ -77,7 +78,7 @@ public class BreachDetectionConstants {
         @Override
         public String toString() {
 
-            return code + " - " + message;
+            return getCode() + " - " + message;
         }
     }
 }

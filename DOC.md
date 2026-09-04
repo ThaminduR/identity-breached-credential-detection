@@ -403,6 +403,40 @@ does not, `identity.xml.j2` does not yet render these keys.
 Look for `Breach detection configuration names sources that are not installed` in the startup log. This
 usually indicates that a connector bundle is missing.
 
+## Error codes and localization
+
+A refusal carries a code and an English message.
+
+<table>
+    <tr>
+        <th>Code</th>
+        <th>Meaning</th>
+    </tr>
+    <tr>
+        <td><code>BRD-60001</code></td>
+        <td>The password was found in a breach source.</td>
+    </tr>
+    <tr>
+        <td><code>BRD-60002</code></td>
+        <td>A source could not check the password and is configured to refuse.</td>
+    </tr>
+</table>
+
+There is no server-side resource bundle. A backend listener runs on a thread that carries no user locale, so
+a message resolved there would use the server's locale for every user. Localization belongs in the client,
+which is how the shipped connectors are written.
+
+> [!WARNING]
+> The codes above do not currently reach a client. The SCIM 2.0 user endpoint returns the English message
+> with no code, and the self-registration and recovery APIs report every password policy failure as
+> `20035 Password Policy Violate` with the message as the description. A breach refusal is therefore
+> indistinguishable by code from a length or history failure, and a client that wants to localize has only
+> the English text to match on.
+>
+> Fixing this means propagating the original error code from `UserStoreClientException` through
+> `identity-recovery` and `scim2.common`. That benefits every password policy connector, not only this one,
+> and is not a change this connector can make.
+
 ## Limitations
 
 <table>
