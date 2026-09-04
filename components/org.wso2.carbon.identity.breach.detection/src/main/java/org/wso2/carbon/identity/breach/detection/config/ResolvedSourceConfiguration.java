@@ -21,7 +21,6 @@ package org.wso2.carbon.identity.breach.detection.config;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.breach.detection.spi.SourceConfiguration;
-import org.wso2.carbon.identity.breach.detection.util.BreachDetectionUtils;
 import org.wso2.carbon.utils.CarbonUtils;
 
 import java.io.File;
@@ -63,13 +62,21 @@ public class ResolvedSourceConfiguration implements SourceConfiguration {
     @Override
     public int getInt(String name, int defaultValue) {
 
-        return BreachDetectionUtils.parseInt(getString(name).orElse(null), defaultValue);
+        String value = getString(name).orElse(null);
+        if (value == null) {
+            return defaultValue;
+        }
+        try {
+            return Integer.parseInt(value);
+        } catch (NumberFormatException e) {
+            return defaultValue;
+        }
     }
 
     @Override
     public boolean getBoolean(String name, boolean defaultValue) {
 
-        return BreachDetectionUtils.parseBoolean(getString(name).orElse(null), defaultValue);
+        return getString(name).map(Boolean::parseBoolean).orElse(defaultValue);
     }
 
     @Override

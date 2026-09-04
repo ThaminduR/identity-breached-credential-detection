@@ -25,7 +25,6 @@ import org.wso2.carbon.identity.breach.detection.constants.BreachDetectionConsta
 import org.wso2.carbon.identity.breach.detection.engine.BreachEvaluationEngine;
 import org.wso2.carbon.identity.breach.detection.model.Decision;
 import org.wso2.carbon.identity.breach.detection.internal.BreachDetectionDataHolder;
-import org.wso2.carbon.identity.breach.detection.util.BreachDetectionUtils;
 import org.wso2.carbon.identity.breach.detection.model.Credential;
 import org.wso2.carbon.identity.core.AbstractIdentityUserOperationEventListener;
 import org.wso2.carbon.identity.core.context.IdentityContext;
@@ -140,13 +139,9 @@ public class BreachDetectionListener extends AbstractIdentityUserOperationEventL
 
         switch (decision) {
             case REFUSE_BREACHED:
-                throw policyRejection(BreachDetectionConstants.ERROR_CODE_BREACHED_PASSWORD,
-                        BreachDetectionConstants.MESSAGE_KEY_BREACHED,
-                        "This password has appeared in a known data breach. Choose a longer, unique password.");
+                throw policyRejection(BreachDetectionConstants.ErrorMessages.ERROR_CODE_BREACHED_PASSWORD);
             case REFUSE_UNVERIFIED:
-                throw policyRejection(BreachDetectionConstants.ERROR_CODE_CANNOT_VERIFY,
-                        BreachDetectionConstants.MESSAGE_KEY_CANNOT_VERIFY,
-                        "This password could not be checked right now. Try again in a moment.");
+                throw policyRejection(BreachDetectionConstants.ErrorMessages.ERROR_CODE_CANNOT_VERIFY);
             default:
                 return true;
         }
@@ -177,10 +172,10 @@ public class BreachDetectionListener extends AbstractIdentityUserOperationEventL
     }
 
     /** The wrapped {@code PolicyViolationException} is what recovery and self-registration recognise. */
-    private UserStoreClientException policyRejection(String errorCode, String messageKey, String fallback) {
+    private UserStoreClientException policyRejection(BreachDetectionConstants.ErrorMessages error) {
 
-        String message = BreachDetectionUtils.getMessage(messageKey, fallback);
-        return new UserStoreClientException(message, errorCode, new PolicyViolationException(message));
+        return new UserStoreClientException(error.getMessage(), error.getCode(),
+                new PolicyViolationException(error.getMessage()));
     }
 
     private String resolveTenantDomain(UserStoreManager userStoreManager) {

@@ -91,8 +91,7 @@
                             org.wso2.carbon.identity.breach.detection.listener,
                             org.wso2.carbon.identity.breach.detection.engine,
                             org.wso2.carbon.identity.breach.detection.source,
-                            org.wso2.carbon.identity.breach.detection.config,
-                            org.wso2.carbon.identity.breach.detection.util
+                            org.wso2.carbon.identity.breach.detection.config
                         </Private-Package>
                         <!--
                           Three packages are exported. The spi and model packages are the contract a

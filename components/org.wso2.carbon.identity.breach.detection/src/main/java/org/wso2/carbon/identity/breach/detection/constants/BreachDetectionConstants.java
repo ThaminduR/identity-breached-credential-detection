@@ -44,13 +44,40 @@ public class BreachDetectionConstants {
     public static final String LOCAL_LIST_SOURCE_ID = "localList";
 
 
-    /** Client errors carrying the reason. A server fault would be indistinguishable from an outage. */
-    public static final String ERROR_CODE_BREACHED_PASSWORD = "BRD-60001";
-    public static final String ERROR_CODE_CANNOT_VERIFY = "BRD-60002";
+    /**
+     * The refusals a user can see. Each pairs a code with English text, the same shape the password policy
+     * connector uses. A client localizes on the code; the text is the fallback when it does not.
+     */
+    public enum ErrorMessages {
 
-    /** Message keys, resolved through the bundled resource bundle so that they localize with the product. */
-    public static final String MESSAGE_KEY_BREACHED = "breach.detection.password.breached";
-    public static final String MESSAGE_KEY_CANNOT_VERIFY = "breach.detection.password.unverifiable";
+        ERROR_CODE_BREACHED_PASSWORD("BRD-60001",
+                "This password has appeared in a known data breach. Choose a longer, unique password."),
+        ERROR_CODE_CANNOT_VERIFY("BRD-60002",
+                "This password could not be checked right now. Try again in a moment.");
 
-    public static final String RESOURCE_BUNDLE = "org.wso2.carbon.identity.breach.detection.i18n.Resources";
+        private final String code;
+        private final String message;
+
+        ErrorMessages(String code, String message) {
+
+            this.code = code;
+            this.message = message;
+        }
+
+        public String getCode() {
+
+            return code;
+        }
+
+        public String getMessage() {
+
+            return message;
+        }
+
+        @Override
+        public String toString() {
+
+            return code + " - " + message;
+        }
+    }
 }
