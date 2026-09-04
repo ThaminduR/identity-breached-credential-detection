@@ -151,8 +151,9 @@ Configured under `[breach_detection.sources.localList]`.
     </tr>
     <tr>
         <td>max_heap_entries</td>
-        <td>[Optional] The maximum number of entries loaded into memory. Loading stops at this count and the
-        server logs an error. <br> <b>Default:</b> <code>5000000</code></td>
+        <td>[Optional] The maximum number of digests held in memory. Loading stops at this count and the
+        server logs an error, so the remainder of the file is not enforced. <br> <b>Default:</b>
+        <code>1000000</code></td>
     </tr>
 </table>
 
@@ -293,8 +294,8 @@ used. Measured cost per entry:
         <th>format</th>
         <th>Per entry</th>
         <th>100,000 entries</th>
-        <th>1,000,000 entries</th>
-        <th>5,000,000 entries (default limit)</th>
+        <th>1,000,000 entries (default limit)</th>
+        <th>5,000,000 entries</th>
     </tr>
     <tr>
         <td><code>sha1</code></td>
@@ -312,8 +313,9 @@ used. Measured cost per entry:
     </tr>
 </table>
 
-The default limit permits 584–699 MB, which is a significant share of a typical heap. Set `max_heap_entries` to
-a value you intend; `1000000` is a reasonable ceiling.
+The default limit permits 117–140 MB, against the 1 GB maximum heap the pack ships with. Raise it only
+together with the heap: the limit caps the entry count, not the bytes, and nothing checks the memory actually
+available.
 
 > [!TIP]
 > A list that is long enough to approach the limit is a signal to use a connector rather than to raise the

@@ -48,11 +48,12 @@ public class LocalBlocklistSource implements BreachSource {
     public static final String PROPERTY_MAX_HEAP_ENTRIES = "max_heap_entries";
 
     /**
-     * This limits the number of entries, not the bytes used. An entry was measured at 122.5 bytes for a
-     * 40-character digest and 146.5 bytes for a 64-character one, so this ceiling costs 584 MB or 699 MB
-     * depending on the format.
+     * Caps the number of digests held in memory, not the bytes they occupy. An entry was measured at 122.5
+     * bytes for a 40-character digest and 146.5 bytes for a 64-character one, so this ceiling costs 123 MB
+     * or 147 MB depending on the format. The pack ships with a 1 GB maximum heap, so a higher default would
+     * let a blocklist exhaust it before the cap was ever reached.
      */
-    private static final int DEFAULT_MAX_HEAP_ENTRIES = 5_000_000;
+    private static final int DEFAULT_MAX_HEAP_ENTRIES = 1_000_000;
 
     private final AtomicReference<BlocklistSnapshot> snapshot = new AtomicReference<>();
 
