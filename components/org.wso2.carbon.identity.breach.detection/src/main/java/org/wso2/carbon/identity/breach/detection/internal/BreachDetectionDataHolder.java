@@ -1,0 +1,102 @@
+/*
+ * Copyright (c) 2026, WSO2 LLC. (http://www.wso2.com).
+ *
+ * WSO2 LLC. licenses this file to you under the Apache License,
+ * Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+package org.wso2.carbon.identity.breach.detection.internal;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.breach.detection.engine.BreachEvaluationEngine;
+import org.wso2.carbon.identity.breach.detection.spi.BreachSource;
+
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
+
+/**
+ * Holds the evaluation engine and the breach sources bound right now.
+ */
+public class BreachDetectionDataHolder {
+
+    private static final Log LOG = LogFactory.getLog(BreachDetectionDataHolder.class);
+
+    private static final BreachDetectionDataHolder INSTANCE = new BreachDetectionDataHolder();
+
+    private final ConcurrentHashMap<String, BreachSource> sources = new ConcurrentHashMap<>();
+
+    private BreachEvaluationEngine evaluationEngine;
+
+    private BreachDetectionDataHolder() {
+
+    }
+
+    public static BreachDetectionDataHolder getInstance() {
+
+        return INSTANCE;
+    }
+
+    public BreachEvaluationEngine getEvaluationEngine() {
+
+        return evaluationEngine;
+    }
+
+    public void setEvaluationEngine(BreachEvaluationEngine evaluationEngine) {
+
+        this.evaluationEngine = evaluationEngine;
+    }
+
+    public void bindSource(BreachSource source) {
+
+        if (source == null || source.getId() == null || source.getId().trim().isEmpty()) {
+            LOG.warn("Ignoring a breach source that did not declare an id.");
+            return;
+        }
+        BreachSource previous = sources.put(source.getId(), source);
+        if (previous != null) {
+            LOG.warn("Breach source id '" + source.getId() + "' was already registered. The newly bound "
+                    + "service replaces it.");
+        }
+        LOG.info("Breach source bound: id=" + source.getId() + ", priority=" + source.getPriority()
+                + ". Bound sources are now " + describe() + ".");
+    }
+
+    public void unbindSource(BreachSource source) {
+
+        if (source == null || source.getId() == null) {
+            return;
+        }
+        sources.remove(source.getId(), source);
+        LOG.info("Breach source unbound: id=" + source.getId() + ". Bound sources are now " + describe() + ".");
+    }
+
+    public List<BreachSource> getSources() {
+
+        List<BreachSource> ordered = new ArrayList<>(sources.values());
+        ordered.sort(Comparator.comparingInt(BreachSource::getPriority)
+                .thenComparing(BreachSource::getId));
+        return ordered;
+    }
+
+    private String describe() {
+
+        return getSources().stream()
+                .map(source -> source.getId() + '@' + source.getPriority())
+                .collect(Collectors.joining(", ", "[", "]"));
+    }
+}
