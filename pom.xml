@@ -36,6 +36,13 @@
     <description>Refuses passwords that already circulate in credential breaches.</description>
     <url>http://wso2.org</url>
 
+    <scm>
+        <url>https://github.com/wso2-extensions/identity-breached-credential-detection.git</url>
+        <developerConnection>scm:git:https://github.com/wso2-extensions/identity-breached-credential-detection.git</developerConnection>
+        <connection>scm:git:https://github.com/wso2-extensions/identity-breached-credential-detection.git</connection>
+        <tag>HEAD</tag>
+    </scm>
+
     <modules>
         <module>components/org.wso2.carbon.identity.breach.detection</module>
         <module>features/org.wso2.carbon.identity.breach.detection.server.feature</module>
